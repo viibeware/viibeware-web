@@ -126,13 +126,22 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.4.1"
+SITE_VERSION = "0.5.0"
 
 
 @app.context_processor
 def inject_globals():
-    """Make cache version and site version available in all templates."""
-    return {"cache_v": CACHE_VERSION, "site_version": SITE_VERSION}
+    """Make cache version, site version, and branding available in all
+    templates (public site, admin pages, login page)."""
+    try:
+        branding = load_content().get("branding", {})
+    except Exception:
+        branding = {}
+    return {
+        "cache_v": CACHE_VERSION,
+        "site_version": SITE_VERSION,
+        "branding": branding,
+    }
 
 # --- Admin credentials ---
 # DEFAULT_ADMIN_PASS is the "fresh install" password; first login with this
@@ -561,6 +570,18 @@ def load_content():
     og.setdefault("description", "")
     og.setdefault("url", "")
     og.setdefault("image", "img/og-image.png")
+
+    # Branding backfill — controls site name and how it's displayed
+    data.setdefault("branding", {})
+    branding = data["branding"]
+    branding.setdefault("name", "viibeware")
+    branding.setdefault("emphasis_part", "viibe")
+    branding.setdefault("transform", "none")  # none | lowercase | uppercase | capitalize
+    branding.setdefault("font_size_rem", 1.15)
+    branding.setdefault("logo_size_px", 32)
+    branding.setdefault("color_primary", "#e8e8f0")
+    branding.setdefault("color_accent", "#00F2FF")
+    branding.setdefault("page_title_suffix", "Corp. — We Don't Write Code")
 
     return data
 
@@ -1149,6 +1170,18 @@ def admin_footer():
         save_content(content)
         return jsonify({"status": "ok", "message": "Footer saved"})
     return _render_admin("admin/footer.html", "footer", content=content)
+
+
+@app.route("/admin/branding", methods=["GET", "POST"])
+@login_required
+def admin_branding():
+    content = load_content()
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        content["branding"] = data
+        save_content(content)
+        return jsonify({"status": "ok", "message": "Branding saved"})
+    return _render_admin("admin/branding.html", "branding", content=content)
 
 
 @app.route("/admin/seo", methods=["GET", "POST"])

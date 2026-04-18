@@ -1,0 +1,157 @@
+{% extends "admin/base.html" %}
+{% block title %}Branding{% endblock %}
+{% block page_title %}Branding{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Control how your site name is displayed — the text, emphasis, sizing, and colors.</div>{% endblock %}
+{% block page_actions %}<button class="btn btn-primary" onclick="saveBranding()">Save</button>{% endblock %}
+
+{% block content %}
+{% set b = content.branding %}
+<div class="card">
+  <div class="card-title">Live preview</div>
+  <div id="brand-preview"
+       style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 1.25rem 1.5rem; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px;">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" id="prev-logo" style="width: {{ b.logo_size_px }}px; height: {{ b.logo_size_px }}px;">
+    <span id="prev-text" style="font-family: var(--font-display); font-weight: 700; font-size: {{ b.font_size_rem }}rem; color: {{ b.color_primary }}; text-transform: {{ b.transform }}; letter-spacing: 0.02em;">
+      <span id="prev-before"></span><em id="prev-emph" style="font-style: normal; color: {{ b.color_accent }}"></em><span id="prev-after"></span>
+    </span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Name</div>
+  <div class="form-row two-col">
+    <div>
+      <label>Site name</label>
+      <input type="text" id="b-name" value="{{ b.name }}" oninput="updatePreview()">
+      <div class="hint">Appears in the nav, page title, and admin header.</div>
+    </div>
+    <div>
+      <label>Emphasized portion</label>
+      <input type="text" id="b-emphasis" value="{{ b.emphasis_part }}" oninput="updatePreview()" placeholder="e.g. viibe">
+      <div class="hint">A substring of the name. Shown in the accent color; leave blank for no emphasis.</div>
+    </div>
+  </div>
+  <div class="form-row two-col">
+    <div>
+      <label>Text transform</label>
+      <select id="b-transform" onchange="updatePreview()">
+        <option value="none" {% if b.transform == 'none' %}selected{% endif %}>None (as typed)</option>
+        <option value="lowercase" {% if b.transform == 'lowercase' %}selected{% endif %}>lowercase</option>
+        <option value="uppercase" {% if b.transform == 'uppercase' %}selected{% endif %}>UPPERCASE</option>
+        <option value="capitalize" {% if b.transform == 'capitalize' %}selected{% endif %}>Capitalize Each Word</option>
+      </select>
+    </div>
+    <div>
+      <label>Page title suffix</label>
+      <input type="text" id="b-suffix" value="{{ b.page_title_suffix }}" placeholder="Corp. — We Don't Write Code">
+      <div class="hint">Appears after the site name in the browser tab title. Blank for name-only.</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Sizing</div>
+  <div class="form-row two-col">
+    <div>
+      <label>Brand font size (rem)</label>
+      <input type="number" id="b-font-size" value="{{ b.font_size_rem }}" min="0.5" max="4" step="0.05" oninput="updatePreview()">
+      <div class="hint">Default 1.15 for the nav. 1rem ≈ 16px.</div>
+    </div>
+    <div>
+      <label>Nav logo size (px)</label>
+      <input type="number" id="b-logo-size" value="{{ b.logo_size_px }}" min="16" max="96" step="1" oninput="updatePreview()">
+      <div class="hint">Default 32.</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Colors</div>
+  <div class="form-row two-col">
+    <div>
+      <label>Primary color</label>
+      <div class="row">
+        <input type="color" id="b-color-primary" value="{{ b.color_primary }}" oninput="syncColor('b-color-primary', 'b-color-primary-hex'); updatePreview()" style="width: 48px; height: 38px; padding: 2px; cursor: pointer;">
+        <input type="text" id="b-color-primary-hex" value="{{ b.color_primary }}" class="mono" oninput="syncHex('b-color-primary-hex', 'b-color-primary'); updatePreview()" style="flex: 1;">
+      </div>
+      <div class="hint">Non-emphasized part of the name.</div>
+    </div>
+    <div>
+      <label>Accent color</label>
+      <div class="row">
+        <input type="color" id="b-color-accent" value="{{ b.color_accent }}" oninput="syncColor('b-color-accent', 'b-color-accent-hex'); updatePreview()" style="width: 48px; height: 38px; padding: 2px; cursor: pointer;">
+        <input type="text" id="b-color-accent-hex" value="{{ b.color_accent }}" class="mono" oninput="syncHex('b-color-accent-hex', 'b-color-accent'); updatePreview()" style="flex: 1;">
+      </div>
+      <div class="hint">Emphasized portion.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function syncColor(colorId, hexId) {
+    const v = document.getElementById(colorId).value;
+    document.getElementById(hexId).value = v;
+  }
+  function syncHex(hexId, colorId) {
+    const v = document.getElementById(hexId).value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+      document.getElementById(colorId).value = v;
+    }
+  }
+
+  function updatePreview() {
+    const name = document.getElementById('b-name').value;
+    const emph = document.getElementById('b-emphasis').value;
+    const transform = document.getElementById('b-transform').value;
+    const fontSize = parseFloat(document.getElementById('b-font-size').value) || 1;
+    const logoSize = parseInt(document.getElementById('b-logo-size').value) || 32;
+    const colorPrimary = document.getElementById('b-color-primary-hex').value;
+    const colorAccent = document.getElementById('b-color-accent-hex').value;
+
+    const text = document.getElementById('prev-text');
+    text.style.fontSize = fontSize + 'rem';
+    text.style.color = colorPrimary;
+    text.style.textTransform = transform;
+
+    const logo = document.getElementById('prev-logo');
+    logo.style.width = logoSize + 'px';
+    logo.style.height = logoSize + 'px';
+
+    const before = document.getElementById('prev-before');
+    const emphEl = document.getElementById('prev-emph');
+    const after = document.getElementById('prev-after');
+    emphEl.style.color = colorAccent;
+
+    if (emph && name.includes(emph)) {
+      const idx = name.indexOf(emph);
+      before.textContent = name.slice(0, idx);
+      emphEl.textContent = emph;
+      after.textContent = name.slice(idx + emph.length);
+    } else {
+      before.textContent = name;
+      emphEl.textContent = '';
+      after.textContent = '';
+    }
+  }
+
+  // Initial render (handles existing emphasis span on load)
+  updatePreview();
+
+  async function saveBranding() {
+    const payload = {
+      name: document.getElementById('b-name').value,
+      emphasis_part: document.getElementById('b-emphasis').value,
+      transform: document.getElementById('b-transform').value,
+      page_title_suffix: document.getElementById('b-suffix').value,
+      font_size_rem: parseFloat(document.getElementById('b-font-size').value) || 1.15,
+      logo_size_px: parseInt(document.getElementById('b-logo-size').value) || 32,
+      color_primary: document.getElementById('b-color-primary-hex').value,
+      color_accent: document.getElementById('b-color-accent-hex').value,
+    };
+    const res = await saveJSON('/admin/branding', payload);
+    if (res.ok) showToast('✓ Branding saved');
+  }
+</script>
+{% endblock %}

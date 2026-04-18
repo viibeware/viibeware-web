@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>viibeware Corp. — We Don't Write Code</title>
+  <title>{{ content.branding.name }}{% if content.branding.page_title_suffix %} {{ content.branding.page_title_suffix }}{% endif %}</title>
   <meta name="description" content="{{ content.og.description | default('viibeware Corp. ships software built by AI. We just point it at problems and hope for the best.') }}">
 
   <!-- Open Graph -->
@@ -27,14 +27,15 @@
 </head>
 <body>
 
-  {% from "macros.html" import render_product, render_install, github_svg, dockerhub_svg %}
+  {% from "macros.html" import render_product, render_install, render_brand, github_svg, dockerhub_svg %}
 
   <!-- ═══ Navigation ═══ -->
   <nav class="nav">
     <div class="nav-inner">
       <a href="#hero" class="nav-logo">
-        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="viibeware logo">
-        <span><em>viibe</em>ware</span>
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="{{ content.branding.name }} logo"
+             style="width: {{ content.branding.logo_size_px }}px; height: {{ content.branding.logo_size_px }}px;">
+        <span style="font-size: {{ content.branding.font_size_rem }}rem; color: {{ content.branding.color_primary }}; text-transform: {{ content.branding.transform }};">{{ render_brand(content.branding) }}</span>
       </a>
       <ul class="nav-links">
         {% for link in content.nav.links %}

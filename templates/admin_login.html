@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In — viibeware Admin</title>
+  <title>Sign In — {{ branding.name or 'Admin' }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ cache_v }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo.svg') }}">
   {% if turnstile and turnstile.enabled and turnstile.site_key %}
@@ -13,7 +13,8 @@
 <body>
   <div class="login-wrap">
     <div class="login-card">
-      <div class="brand"><em>viibe</em>ware admin</div>
+      {% from "macros.html" import render_brand %}
+      <div class="brand" style="color: {{ branding.color_primary or '#e8e8f0' }};">{{ render_brand(branding) }} admin</div>
       <div class="brand-sub">Sign in to continue</div>
 
       {% with messages = get_flashed_messages(with_categories=true) %}

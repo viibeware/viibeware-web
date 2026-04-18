@@ -2,6 +2,26 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.5.0] — 2026-04-18
+
+### Added
+- **Branding admin page** (`/admin/branding`, sidebar link under Page Content) — controls the site name and how it's displayed on the public nav, the browser tab title, and the admin chrome. Fields:
+  - `name` — the site name shown in the nav and titles.
+  - `emphasis_part` — a substring of the name to highlight in an accent color.
+  - `transform` — none / lowercase / UPPERCASE / Capitalize Each Word.
+  - `page_title_suffix` — text appended to the browser tab title.
+  - `font_size_rem` — nav brand font size (rem).
+  - `logo_size_px` — nav logo image size (px).
+  - `color_primary` and `color_accent` — HTML5 color pickers + sync'd hex inputs.
+  - Live preview card at the top of the page.
+- Global `branding` context variable available in every template (public, admin, login).
+- `render_brand(branding)` Jinja macro that splits the name around the emphasis substring and wraps the accent portion in `<em>`.
+
+### Changed
+- Public nav logo, page `<title>`, admin page `<title>`, login brand, and sidebar brand now all pull from `content.branding` instead of hardcoded "viibeware".
+
+---
+
 ## [0.4.1] — 2026-04-18
 
 ### Fixed
