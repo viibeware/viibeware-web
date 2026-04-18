@@ -1,0 +1,506 @@
+{% extends "admin/base.html" %}
+{% block title %}Edit {{ product.name }}{% endblock %}
+{% block page_title %}{{ product.name or product.id }}{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle"><span class="mono">id: {{ product.id }}</span></div>{% endblock %}
+{% block page_actions %}
+<a href="{{ url_for('admin_products') }}" class="btn">← Back</a>
+<button class="btn btn-primary" onclick="saveProduct()">Save</button>
+{% endblock %}
+
+{% block content %}
+<div class="tabs">
+  <button data-tab="tab-core" class="active">Core</button>
+  <button data-tab="tab-media">Media</button>
+  <button data-tab="tab-features">Features &amp; tech</button>
+  <button data-tab="tab-repos">Repo links</button>
+  <button data-tab="tab-install">Install</button>
+</div>
+
+<!-- ── Core ───────────────────────────────────────── -->
+<div class="tab-panel active" id="tab-core">
+  <div class="card">
+    <div class="form-row two-col">
+      <div>
+        <label>Name</label>
+        <input type="text" id="p-name" value="{{ product.name or '' }}">
+      </div>
+      <div>
+        <label>Version</label>
+        <div class="row" style="gap: 0.4rem;">
+          <input type="text" id="p-version" value="{{ product.version or '' }}" placeholder="1.0.0 or latest" style="flex: 1;">
+          <button type="button" class="btn btn-sm" onclick="refreshVersion()" title="Fetch the latest version from GitHub now">⟳ Refresh</button>
+        </div>
+        <div class="hint" id="p-version-hint">
+          {% if product.version_fetched_at %}Last fetched: <span class="mono">{{ product.version_fetched_at }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row two-col">
+      <div>
+        <label>Version source</label>
+        <select id="p-version-source">
+          <option value="manual" {% if product.version_source == 'manual' or not product.version_source %}selected{% endif %}>Manual (enter version above)</option>
+          <option value="github_release" {% if product.version_source == 'github_release' %}selected{% endif %}>Latest GitHub Release</option>
+          <option value="github_tag" {% if product.version_source == 'github_tag' %}selected{% endif %}>Latest Git Tag</option>
+        </select>
+        <div class="hint">Auto-source refreshes every 6 hours; use Refresh to update now.</div>
+      </div>
+      <div>
+        <label>GitHub repo (owner/name)</label>
+        <input type="text" id="p-github-repo" value="{{ product.github_repo or '' }}" placeholder="viibeware/garage-logbook" class="mono">
+        <div class="hint">Required when version source is GitHub. Public repos work without a token; set <code>GITHUB_TOKEN</code> env for higher rate limits.</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Tagline</label>
+      <input type="text" id="p-tagline" value="{{ product.tagline or '' }}">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="p-description" style="min-height: 120px;">{{ product.description or '' }}</textarea>
+    </div>
+
+    <div class="subheader">Display</div>
+    <div class="form-row two-col">
+      <div>
+        <label>Logo size (px)</label>
+        <input type="number" id="p-logo-size" min="24" max="320" step="4" value="{{ product.logo_size | default(80) }}">
+        <div class="hint">Logo is rendered square. Default 80.</div>
+      </div>
+      <div>
+        <label>Title size (px)</label>
+        <input type="number" id="p-title-size" min="0" max="96" step="1" value="{{ product.title_size | default(0) }}">
+        <div class="hint">0 uses the responsive default (scales with viewport).</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Media ──────────────────────────────────────── -->
+<div class="tab-panel" id="tab-media">
+  <div class="card">
+    <div class="card-title">Logo</div>
+    <div class="upload-tile" id="logo-tile" style="max-width: 260px;">
+      <div class="preview">
+        {% if product.logo %}
+        <img src="{{ url_for('static', filename=product.logo) }}?v={{ cache_v }}" alt="Logo">
+        {% else %}
+        <span class="empty">No logo</span>
+        {% endif %}
+      </div>
+      <div class="path" id="logo-path">{{ product.logo or '' }}</div>
+      <div class="tile-actions">
+        <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="uploadTileFile(this, 'logo-tile', 'logo-path')">
+        <button class="btn btn-sm" onclick="document.getElementById('logo-file').click()">Upload</button>
+        <button class="btn btn-sm btn-danger" onclick="clearTile('logo-tile', 'logo-path', 'No logo')">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Featured image</div>
+    <div class="card-sub">Large image shown prominently next to the product heading.</div>
+    <div class="upload-tile" id="featured-tile" style="max-width: 360px;">
+      <div class="preview">
+        {% if product.featured_image %}
+        <img src="{{ url_for('static', filename=product.featured_image) }}?v={{ cache_v }}" alt="Featured">
+        {% else %}
+        <span class="empty">No image</span>
+        {% endif %}
+      </div>
+      <div class="path" id="featured-path">{{ product.featured_image or '' }}</div>
+      <div class="tile-actions">
+        <input type="file" id="featured-file" accept="image/*" style="display:none" onchange="uploadTileFile(this, 'featured-tile', 'featured-path')">
+        <button class="btn btn-sm" onclick="document.getElementById('featured-file').click()">Upload</button>
+        <button class="btn btn-sm btn-danger" onclick="clearTile('featured-tile', 'featured-path', 'No image')">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Screenshots <button class="btn btn-sm" onclick="document.getElementById('screenshots-file').click()">+ Add screenshot</button></div>
+    <div class="card-sub">Unlimited. Drag to reorder. Click "Upload" on an empty tile to replace or insert an image.</div>
+    <input type="file" id="screenshots-file" accept="image/*" multiple style="display:none" onchange="addScreenshots(this)">
+    <div class="upload-grid" id="screenshots-grid">
+      {% for src in product.screenshots %}
+      {% if src %}
+      <div class="upload-tile screenshot-tile" draggable="true" data-path="{{ src }}">
+        <div class="preview"><img src="{{ url_for('static', filename=src) }}?v={{ cache_v }}" alt="Screenshot"></div>
+        <div class="path">{{ src }}</div>
+        <div class="tile-actions">
+          <button class="btn btn-sm" onclick="replaceScreenshot(this)">Replace</button>
+          <button class="btn btn-sm btn-danger" onclick="this.closest('.screenshot-tile').remove()">Remove</button>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% if not (product.screenshots | select | list) %}
+    <div class="text-muted" style="margin-top: 0.75rem;" id="screenshots-empty">No screenshots yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Features & tech ────────────────────────────── -->
+<div class="tab-panel" id="tab-features">
+  <div class="card">
+    <div class="card-title">Features <button class="btn btn-sm" onclick="addFeature()">+ Add</button></div>
+    <div class="card-sub">Bulleted feature list shown below the product description.</div>
+    <div class="list" id="features-list">
+      {% for feat in product.features %}
+      <div class="list-item" draggable="true">
+        <span class="drag-handle">⠿</span>
+        <input type="text" class="feat-input" value="{{ feat }}">
+        <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Tech stack <button class="btn btn-sm" onclick="addTech()">+ Add</button></div>
+    <div class="card-sub">Small badges displayed next to the description.</div>
+    <div class="list" id="tech-list">
+      {% for t in product.tech_stack %}
+      <div class="list-item" draggable="true">
+        <span class="drag-handle">⠿</span>
+        <input type="text" class="tech-input" value="{{ t }}">
+        <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Repo links ─────────────────────────────────── -->
+<div class="tab-panel" id="tab-repos">
+  <div class="card">
+    <div class="card-title">Repo links <button class="btn btn-sm" onclick="addRepo()">+ Add</button></div>
+    <div class="card-sub">Shown as buttons under the product info. Icon values <code>github</code> or <code>dockerhub</code> render a branded SVG.</div>
+    <div class="list" id="repos-list">
+      {% for link in product.repo_links %}
+      <div class="list-item repo-row" draggable="true" style="grid-template-columns: 28px 1fr 1fr 2fr 1fr auto auto;">
+        <span class="drag-handle">⠿</span>
+        <input type="text" class="repo-id" placeholder="ID (e.g. github)" value="{{ link.id or '' }}">
+        <input type="text" class="repo-label" placeholder="Label" value="{{ link.label or '' }}">
+        <input type="text" class="repo-url" placeholder="URL" value="{{ link.url or '' }}">
+        <input type="text" class="repo-icon" placeholder="Icon (github, dockerhub, or blank)" value="{{ link.icon or '' }}">
+        <label class="toggle"><input type="checkbox" class="repo-enabled" {% if link.enabled %}checked{% endif %}><span class="track"></span></label>
+        <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Install tabs & steps ───────────────────────── -->
+<div class="tab-panel" id="tab-install">
+  <div class="card">
+    <div class="card-title">Install tabs <button class="btn btn-sm" onclick="addTab()">+ Add tab</button></div>
+    <div class="card-sub">Each tab holds its own ordered list of install steps. If only one tab is enabled, the tab selector is hidden on the public site.</div>
+
+    <div id="tabs-container" class="stack-md">
+      {% for tab in product.install_tabs %}
+      <div class="card tab-card" data-tab-id="{{ tab.id }}" style="background: var(--bg-input);">
+        <div class="row between" style="margin-bottom: 1rem;">
+          <div class="row">
+            <input type="text" class="tab-id" placeholder="ID (e.g. docker)" value="{{ tab.id or '' }}" style="width: 160px;" class="mono">
+            <input type="text" class="tab-label" placeholder="Label" value="{{ tab.label or '' }}" style="width: 220px;">
+            <label class="inline">
+              <span class="toggle"><input type="checkbox" class="tab-enabled" {% if tab.enabled %}checked{% endif %}><span class="track"></span></span>
+              <span>Enabled</span>
+            </label>
+          </div>
+          <div class="row">
+            <button class="btn btn-sm" onclick="addStep(this)">+ Step</button>
+            <button class="btn btn-sm btn-danger" onclick="removeTab(this)">Remove tab</button>
+          </div>
+        </div>
+
+        <div class="steps-list stack-md">
+          {% for step in tab.steps %}
+          <div class="step-item" draggable="true" style="background: var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding: 1rem;">
+            <div class="row between" style="margin-bottom: 0.6rem;">
+              <div class="row">
+                <span class="drag-handle">⠿</span>
+                <input type="text" class="step-number" placeholder="#" value="{{ step.step or loop.index }}" style="width: 60px;" class="mono">
+                <input type="text" class="step-title" placeholder="Step title" value="{{ step.title or '' }}" style="width: 320px;">
+              </div>
+              <button class="list-item-remove" onclick="this.closest('.step-item').remove()">×</button>
+            </div>
+            <div class="field">
+              <label>Description (optional)</label>
+              <textarea class="step-desc" style="min-height: 60px;">{{ step.desc or '' }}</textarea>
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <label>Command / code block</label>
+              <textarea class="step-cmd code" style="min-height: 80px;">{{ step.cmd or '' }}</textarea>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Tab switching ────────────────────────────────────
+  document.querySelectorAll('.tabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.getElementById(b.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── Drag-reorder lists ───────────────────────────────
+  enableDragReorder('#features-list');
+  enableDragReorder('#tech-list');
+  enableDragReorder('#repos-list');
+  enableDragReorder('#screenshots-grid', '.screenshot-tile');
+  // Steps: each tab has its own list
+  document.querySelectorAll('.steps-list').forEach(el => enableDragReorder(el, '.step-item'));
+
+  // ── Upload helpers ───────────────────────────────────
+  async function uploadTileFile(input, tileId, pathId) {
+    const file = input.files[0];
+    if (!file) return;
+    const path = await uploadFile(file);
+    if (!path) { input.value = ''; return; }
+    const tile = document.getElementById(tileId);
+    tile.querySelector('.preview').innerHTML = `<img src="/static/${path}?t=${Date.now()}" alt="">`;
+    document.getElementById(pathId).textContent = path;
+    showToast('✓ Uploaded');
+    input.value = '';
+  }
+  function clearTile(tileId, pathId, emptyMsg) {
+    const tile = document.getElementById(tileId);
+    tile.querySelector('.preview').innerHTML = `<span class="empty">${emptyMsg}</span>`;
+    document.getElementById(pathId).textContent = '';
+  }
+
+  // ── Screenshots ──────────────────────────────────────
+  async function addScreenshots(input) {
+    const grid = document.getElementById('screenshots-grid');
+    const empty = document.getElementById('screenshots-empty');
+    for (const file of input.files) {
+      const path = await uploadFile(file);
+      if (!path) continue;
+      if (empty) empty.remove();
+      const tile = document.createElement('div');
+      tile.className = 'upload-tile screenshot-tile';
+      tile.draggable = true;
+      tile.dataset.path = path;
+      tile.innerHTML = `
+        <div class="preview"><img src="/static/${path}?t=${Date.now()}" alt="Screenshot"></div>
+        <div class="path">${path}</div>
+        <div class="tile-actions">
+          <button class="btn btn-sm" onclick="replaceScreenshot(this)">Replace</button>
+          <button class="btn btn-sm btn-danger" onclick="this.closest('.screenshot-tile').remove()">Remove</button>
+        </div>
+      `;
+      grid.appendChild(tile);
+    }
+    input.value = '';
+    showToast('✓ Screenshots added — remember to Save');
+  }
+  function replaceScreenshot(btn) {
+    const tile = btn.closest('.screenshot-tile');
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/*';
+    inp.onchange = async () => {
+      const file = inp.files[0];
+      if (!file) return;
+      const path = await uploadFile(file);
+      if (!path) return;
+      tile.dataset.path = path;
+      tile.querySelector('.preview').innerHTML = `<img src="/static/${path}?t=${Date.now()}" alt="Screenshot">`;
+      tile.querySelector('.path').textContent = path;
+      showToast('✓ Replaced');
+    };
+    inp.click();
+  }
+
+  // ── Simple list adders ───────────────────────────────
+  function addFeature() {
+    const list = document.getElementById('features-list');
+    const row = document.createElement('div');
+    row.className = 'list-item';
+    row.draggable = true;
+    row.innerHTML = `<span class="drag-handle">⠿</span><input type="text" class="feat-input" placeholder="Feature"><button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>`;
+    list.appendChild(row);
+    row.querySelector('input').focus();
+  }
+  function addTech() {
+    const list = document.getElementById('tech-list');
+    const row = document.createElement('div');
+    row.className = 'list-item';
+    row.draggable = true;
+    row.innerHTML = `<span class="drag-handle">⠿</span><input type="text" class="tech-input" placeholder="e.g. Python"><button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>`;
+    list.appendChild(row);
+    row.querySelector('input').focus();
+  }
+  function addRepo() {
+    const list = document.getElementById('repos-list');
+    const row = document.createElement('div');
+    row.className = 'list-item repo-row';
+    row.draggable = true;
+    row.style.gridTemplateColumns = '28px 1fr 1fr 2fr 1fr auto auto';
+    row.innerHTML = `
+      <span class="drag-handle">⠿</span>
+      <input type="text" class="repo-id" placeholder="ID (e.g. github)">
+      <input type="text" class="repo-label" placeholder="Label">
+      <input type="text" class="repo-url" placeholder="URL">
+      <input type="text" class="repo-icon" placeholder="Icon (github, dockerhub, or blank)">
+      <label class="toggle"><input type="checkbox" class="repo-enabled" checked><span class="track"></span></label>
+      <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+    `;
+    list.appendChild(row);
+    row.querySelector('input').focus();
+  }
+
+  // ── Install tabs ─────────────────────────────────────
+  function addTab() {
+    const container = document.getElementById('tabs-container');
+    const card = document.createElement('div');
+    card.className = 'card tab-card';
+    card.dataset.tabId = '';
+    card.style.background = 'var(--bg-input)';
+    card.innerHTML = `
+      <div class="row between" style="margin-bottom: 1rem;">
+        <div class="row">
+          <input type="text" class="tab-id mono" placeholder="ID (e.g. docker)" value="" style="width: 160px;">
+          <input type="text" class="tab-label" placeholder="Label" value="" style="width: 220px;">
+          <label class="inline">
+            <span class="toggle"><input type="checkbox" class="tab-enabled" checked><span class="track"></span></span>
+            <span>Enabled</span>
+          </label>
+        </div>
+        <div class="row">
+          <button class="btn btn-sm" onclick="addStep(this)">+ Step</button>
+          <button class="btn btn-sm btn-danger" onclick="removeTab(this)">Remove tab</button>
+        </div>
+      </div>
+      <div class="steps-list stack-md"></div>
+    `;
+    container.appendChild(card);
+    enableDragReorder(card.querySelector('.steps-list'), '.step-item');
+    card.querySelector('.tab-id').focus();
+  }
+
+  function removeTab(btn) {
+    const card = btn.closest('.tab-card');
+    if (!confirm('Remove this install tab and all its steps?')) return;
+    card.remove();
+  }
+
+  function addStep(btn) {
+    const card = btn.closest('.tab-card');
+    const list = card.querySelector('.steps-list');
+    const step = document.createElement('div');
+    step.className = 'step-item';
+    step.draggable = true;
+    step.style.cssText = 'background: var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding: 1rem;';
+    const nextNum = list.querySelectorAll('.step-item').length + 1;
+    step.innerHTML = `
+      <div class="row between" style="margin-bottom: 0.6rem;">
+        <div class="row">
+          <span class="drag-handle">⠿</span>
+          <input type="text" class="step-number mono" placeholder="#" value="${nextNum}" style="width: 60px;">
+          <input type="text" class="step-title" placeholder="Step title" style="width: 320px;">
+        </div>
+        <button class="list-item-remove" onclick="this.closest('.step-item').remove()">×</button>
+      </div>
+      <div class="field">
+        <label>Description (optional)</label>
+        <textarea class="step-desc" style="min-height: 60px;"></textarea>
+      </div>
+      <div class="field" style="margin-bottom: 0;">
+        <label>Command / code block</label>
+        <textarea class="step-cmd code" style="min-height: 80px;"></textarea>
+      </div>
+    `;
+    list.appendChild(step);
+    step.querySelector('.step-title').focus();
+  }
+
+  // ── Refresh version from GitHub ──────────────────────
+  async function refreshVersion() {
+    const src = document.getElementById('p-version-source').value;
+    const repo = document.getElementById('p-github-repo').value.trim();
+    if (src === 'manual') { showToast('Change version source to GitHub first', 'error'); return; }
+    if (!repo) { showToast('Enter a GitHub repo (owner/name) first', 'error'); return; }
+    // Save current form first so the server reads the repo we just typed
+    showToast('Saving, then fetching…');
+    await saveProduct();
+    const res = await saveJSON('{{ url_for("admin_product_refresh_version", product_id=product.id) }}', {});
+    if (res.ok && res.data) {
+      document.getElementById('p-version').value = res.data.version || '';
+      const hint = document.getElementById('p-version-hint');
+      if (res.data.fetched_at) hint.innerHTML = `Last fetched: <span class="mono">${res.data.fetched_at}</span>`;
+      showToast(`✓ ${res.data.message}`);
+    }
+  }
+
+  // ── Save ─────────────────────────────────────────────
+  async function saveProduct() {
+    const features = [...document.querySelectorAll('#features-list .feat-input')]
+      .map(i => i.value.trim()).filter(Boolean);
+    const tech_stack = [...document.querySelectorAll('#tech-list .tech-input')]
+      .map(i => i.value.trim()).filter(Boolean);
+    const screenshots = [...document.querySelectorAll('#screenshots-grid .screenshot-tile')]
+      .map(t => t.dataset.path).filter(Boolean);
+    const repo_links = [...document.querySelectorAll('#repos-list .repo-row')].map(el => ({
+      id: el.querySelector('.repo-id').value.trim(),
+      label: el.querySelector('.repo-label').value.trim(),
+      url: el.querySelector('.repo-url').value.trim(),
+      icon: el.querySelector('.repo-icon').value.trim(),
+      enabled: el.querySelector('.repo-enabled').checked,
+    })).filter(r => r.label || r.url);
+    const install_tabs = [...document.querySelectorAll('#tabs-container .tab-card')].map(tabEl => {
+      const steps = [...tabEl.querySelectorAll('.step-item')].map(stepEl => ({
+        step: stepEl.querySelector('.step-number').value.trim(),
+        title: stepEl.querySelector('.step-title').value,
+        desc: stepEl.querySelector('.step-desc').value,
+        cmd: stepEl.querySelector('.step-cmd').value,
+      })).filter(s => s.title || s.desc || s.cmd);
+      return {
+        id: tabEl.querySelector('.tab-id').value.trim(),
+        label: tabEl.querySelector('.tab-label').value.trim(),
+        enabled: tabEl.querySelector('.tab-enabled').checked,
+        steps,
+      };
+    }).filter(t => t.id);
+
+    const payload = {
+      id: '{{ product.id }}',
+      name: document.getElementById('p-name').value,
+      version: document.getElementById('p-version').value,
+      version_source: document.getElementById('p-version-source').value,
+      github_repo: document.getElementById('p-github-repo').value.trim(),
+      version_fetched_at: '{{ product.version_fetched_at or "" }}',
+      tagline: document.getElementById('p-tagline').value,
+      description: document.getElementById('p-description').value,
+      logo: document.getElementById('logo-path').textContent.trim(),
+      logo_size: parseInt(document.getElementById('p-logo-size').value) || 80,
+      title_size: parseInt(document.getElementById('p-title-size').value) || 0,
+      featured_image: document.getElementById('featured-path').textContent.trim(),
+      screenshots,
+      features,
+      tech_stack,
+      repo_links,
+      install_tabs,
+    };
+
+    const res = await saveJSON('{{ url_for("admin_product_edit", product_id=product.id) }}', payload);
+    if (res.ok) showToast('✓ Product saved');
+  }
+</script>
+{% endblock %}

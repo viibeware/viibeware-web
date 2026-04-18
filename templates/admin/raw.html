@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{% block title %}Raw JSON Editor{% endblock %}
+{% block page_title %}Raw JSON Editor{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Direct edit of <code>content.json</code>. Use with care — malformed JSON will be rejected.</div>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <form method="POST" id="raw-form">
+    <textarea name="raw_json" class="code" style="min-height: 70vh; font-size: 0.8rem;" spellcheck="false">{{ raw_json }}</textarea>
+    <div class="card-actions">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="button" class="btn" onclick="window.location.reload()">Reload from disk</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "admin/base.html" %}
+{% block title %}Backup &amp; Restore{% endblock %}
+{% block page_title %}Backup &amp; Restore{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Export a full site backup (content + images) as a single zip, or restore from a previous backup.</div>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">Export</div>
+  <div class="card-sub">Downloads a zip containing <code>content.json</code> and every file in <code>static/uploads/</code>.</div>
+  <a href="{{ url_for('admin_export') }}" class="btn btn-primary">Download backup</a>
+</div>
+
+<div class="card">
+  <div class="card-title">Restore</div>
+  <div class="card-sub" style="color: var(--warning);">Importing overwrites current content and any images with matching filenames. A snapshot of the current <code>content.json</code> is saved alongside as <code>content.pre-import-&lt;timestamp&gt;.json</code>.</div>
+  <div class="row">
+    <input type="file" id="import-file" accept=".zip,application/zip" style="display:none" onchange="importBackup(this)">
+    <button class="btn" onclick="document.getElementById('import-file').click()">Choose backup zip…</button>
+    <span id="import-status" class="text-muted"></span>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function importBackup(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (!confirm(`Restore from "${file.name}"?\n\nThis overwrites current content and any matching images.`)) {
+      input.value = '';
+      return;
+    }
+    document.getElementById('import-status').textContent = 'Uploading…';
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/admin/import', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd,
+      });
+      if (res.status === 401) {
+        showToast('Session expired — redirecting to login', 'error');
+        setTimeout(() => window.location.href = '/admin/login', 1000);
+        return;
+      }
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try { const j = await res.json(); if (j.message) msg = j.message; } catch (_) {}
+        showToast(`✗ ${msg}`, 'error');
+        document.getElementById('import-status').textContent = '';
+        return;
+      }
+      const data = await res.json();
+      document.getElementById('import-status').textContent = data.message || 'Imported';
+      showToast('✓ Restored — reloading…');
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (e) {
+      showToast(`✗ ${e.message || 'Network error'}`, 'error');
+      document.getElementById('import-status').textContent = '';
+    } finally {
+      input.value = '';
+    }
+  }
+</script>
+{% endblock %}

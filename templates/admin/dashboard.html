@@ -1,0 +1,58 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Overview of your site content. Use the sidebar to edit any section.</div>{% endblock %}
+{% block page_actions %}
+<a href="{{ url_for('index') }}" target="_blank" rel="noopener" class="btn">View site ↗</a>
+{% endblock %}
+
+{% block content %}
+<div class="stack-md">
+  <div class="card">
+    <div class="card-title">At a glance</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem;">
+      <div style="background:var(--bg-input); padding:1rem; border-radius:10px; border:1px solid var(--border);">
+        <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em;">Products</div>
+        <div style="font-family:var(--font-display); font-size:1.75rem; font-weight:700; color:var(--cyan);">{{ stats.products }}</div>
+      </div>
+      <div style="background:var(--bg-input); padding:1rem; border-radius:10px; border:1px solid var(--border);">
+        <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em;">Sections enabled</div>
+        <div style="font-family:var(--font-display); font-size:1.75rem; font-weight:700; color:var(--cyan);">{{ stats.sections_enabled }}<span style="color:var(--text-muted); font-size:1rem;"> / {{ stats.sections_total }}</span></div>
+      </div>
+      <div style="background:var(--bg-input); padding:1rem; border-radius:10px; border:1px solid var(--border);">
+        <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em;">Nav links</div>
+        <div style="font-family:var(--font-display); font-size:1.75rem; font-weight:700; color:var(--cyan);">{{ stats.nav_links }}</div>
+      </div>
+      <div style="background:var(--bg-input); padding:1rem; border-radius:10px; border:1px solid var(--border);">
+        <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em;">Version</div>
+        <div style="font-family:var(--font-display); font-size:1.75rem; font-weight:700; color:var(--cyan);">{{ site_version }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Products <a href="{{ url_for('admin_products') }}" class="btn btn-sm">Manage →</a></div>
+    {% if content.products %}
+    <table class="table">
+      <thead><tr><th>Product</th><th>Version</th><th>Features</th><th>Install tabs</th><th></th></tr></thead>
+      <tbody>
+        {% for p in content.products %}
+        <tr>
+          <td>
+            <strong>{{ p.name }}</strong>
+            <div class="text-muted mono" style="font-size:0.75rem;">{{ p.id }}</div>
+          </td>
+          <td>{{ p.version or '—' }}</td>
+          <td>{{ p.features|length }}</td>
+          <td>{{ p.install_tabs|selectattr('enabled')|list|length }} / {{ p.install_tabs|length }}</td>
+          <td class="actions"><a href="{{ url_for('admin_product_edit', product_id=p.id) }}" class="btn btn-sm">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-muted">No products yet. <a href="{{ url_for('admin_products') }}">Create one</a>.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

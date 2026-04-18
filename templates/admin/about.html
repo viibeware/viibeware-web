@@ -1,0 +1,67 @@
+{% extends "admin/base.html" %}
+{% block title %}About{% endblock %}
+{% block page_title %}About section{% endblock %}
+{% block page_actions %}<button class="btn btn-primary" onclick="saveAbout()">Save</button>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="field">
+    <label>Title</label>
+    <input type="text" id="about-title" value="{{ content.about.title or '' }}">
+  </div>
+  <div class="field">
+    <label>Body</label>
+    <textarea id="about-body" style="min-height: 140px;">{{ content.about.body or '' }}</textarea>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Principles <button class="btn btn-sm" onclick="addPrinciple()">+ Add</button></div>
+  <div class="card-sub">Bullet-style cards shown next to the About body.</div>
+  <div class="list" id="principles-list">
+    {% for pr in content.about.principles %}
+    <div class="list-item" draggable="true" style="grid-template-columns: 28px 1fr 3fr auto;">
+      <span class="drag-handle">⠿</span>
+      <input type="text" class="pr-title" placeholder="Title" value="{{ pr.title or '' }}">
+      <input type="text" class="pr-desc" placeholder="Description" value="{{ pr.desc or '' }}">
+      <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  enableDragReorder('#principles-list');
+
+  function addPrinciple() {
+    const list = document.getElementById('principles-list');
+    const row = document.createElement('div');
+    row.className = 'list-item';
+    row.draggable = true;
+    row.style.gridTemplateColumns = '28px 1fr 3fr auto';
+    row.innerHTML = `
+      <span class="drag-handle">⠿</span>
+      <input type="text" class="pr-title" placeholder="Title">
+      <input type="text" class="pr-desc" placeholder="Description">
+      <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+    `;
+    list.appendChild(row);
+    row.querySelector('.pr-title').focus();
+  }
+
+  async function saveAbout() {
+    const principles = [...document.querySelectorAll('#principles-list .list-item')].map(el => ({
+      title: el.querySelector('.pr-title').value,
+      desc: el.querySelector('.pr-desc').value,
+    })).filter(p => p.title || p.desc);
+    const res = await saveJSON('/admin/about', {
+      title: document.getElementById('about-title').value,
+      body: document.getElementById('about-body').value,
+      principles,
+    });
+    if (res.ok) showToast('✓ About saved');
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% block title %}Hero{% endblock %}
+{% block page_title %}Hero{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Top-of-page hero banner. Disabled by default — toggle it on in the Layout page.</div>{% endblock %}
+{% block page_actions %}<button class="btn btn-primary" onclick="saveHero()">Save</button>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="field">
+    <label>Headline</label>
+    <input type="text" id="hero-headline" value="{{ content.hero.headline or '' }}">
+  </div>
+  <div class="field">
+    <label>Subheadline</label>
+    <textarea id="hero-subheadline">{{ content.hero.subheadline or '' }}</textarea>
+  </div>
+  <div class="form-row two-col">
+    <div>
+      <label>Primary CTA label</label>
+      <input type="text" id="hero-cta1" value="{{ content.hero.cta_primary or '' }}">
+    </div>
+    <div>
+      <label>Secondary CTA label</label>
+      <input type="text" id="hero-cta2" value="{{ content.hero.cta_secondary or '' }}">
+    </div>
+  </div>
+  <div class="form-row two-col">
+    <div>
+      <label>Primary CTA target (#anchor)</label>
+      <input type="text" id="hero-cta1-href" value="{{ content.hero.cta_primary_href or '' }}" placeholder="#products">
+    </div>
+    <div>
+      <label>Secondary CTA target (#anchor)</label>
+      <input type="text" id="hero-cta2-href" value="{{ content.hero.cta_secondary_href or '' }}" placeholder="#install">
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function saveHero() {
+    const res = await saveJSON('/admin/hero', {
+      headline: document.getElementById('hero-headline').value,
+      subheadline: document.getElementById('hero-subheadline').value,
+      cta_primary: document.getElementById('hero-cta1').value,
+      cta_secondary: document.getElementById('hero-cta2').value,
+      cta_primary_href: document.getElementById('hero-cta1-href').value,
+      cta_secondary_href: document.getElementById('hero-cta2-href').value,
+    });
+    if (res.ok) showToast('✓ Hero saved');
+  }
+</script>
+{% endblock %}

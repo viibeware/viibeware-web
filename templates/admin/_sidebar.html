@@ -1,0 +1,49 @@
+{# Sidebar — renders nav sections. `active_section` is set by each page template. #}
+{% set active = active_section|default('') %}
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="viibeware">
+    <div>
+      <div class="brand-text"><em>viibe</em>ware admin</div>
+      <span class="brand-sub">v{{ site_version }}</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Overview</div>
+      <a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if active == 'dashboard' %}active{% endif %}">Dashboard</a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Page Content</div>
+      <a href="{{ url_for('admin_layout') }}" class="nav-link {% if active == 'layout' %}active{% endif %}">Layout &amp; Sections</a>
+      <a href="{{ url_for('admin_navigation') }}" class="nav-link {% if active == 'navigation' %}active{% endif %}">Navigation</a>
+      <a href="{{ url_for('admin_hero') }}" class="nav-link {% if active == 'hero' %}active{% endif %}">Hero</a>
+      <a href="{{ url_for('admin_about') }}" class="nav-link {% if active == 'about' %}active{% endif %}">About</a>
+      <a href="{{ url_for('admin_footer') }}" class="nav-link {% if active == 'footer' %}active{% endif %}">Footer</a>
+      <a href="{{ url_for('admin_seo') }}" class="nav-link {% if active == 'seo' %}active{% endif %}">SEO / Open Graph</a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Products</div>
+      <a href="{{ url_for('admin_products') }}" class="nav-link {% if active == 'products' %}active{% endif %}">All Products</a>
+      {% if sidebar_products %}
+      {% for p in sidebar_products %}
+      <a href="{{ url_for('admin_product_edit', product_id=p.id) }}" class="nav-link nav-link-sub {% if active == 'product:' ~ p.id %}active{% endif %}">{{ p.name or p.id }}</a>
+      {% endfor %}
+      {% endif %}
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">System</div>
+      <a href="{{ url_for('admin_backup') }}" class="nav-link {% if active == 'backup' %}active{% endif %}">Backup &amp; Restore</a>
+      <a href="{{ url_for('admin_raw') }}" class="nav-link {% if active == 'raw' %}active{% endif %}">Raw JSON Editor</a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <a href="{{ url_for('index') }}" target="_blank" rel="noopener">View site ↗</a>
+    <a href="{{ url_for('admin_logout') }}">Log out</a>
+  </div>
+</aside>

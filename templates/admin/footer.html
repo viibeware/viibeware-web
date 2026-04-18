@@ -1,0 +1,72 @@
+{% extends "admin/base.html" %}
+{% block title %}Footer{% endblock %}
+{% block page_title %}Footer{% endblock %}
+{% block page_actions %}<button class="btn btn-primary" onclick="saveFooter()">Save</button>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="field">
+    <label>Tagline</label>
+    <input type="text" id="footer-tagline" value="{{ content.footer.tagline or '' }}">
+  </div>
+  <div class="field">
+    <label>Copyright year</label>
+    <input type="number" id="footer-year" value="{{ content.footer.year or 2026 }}" style="max-width: 140px;">
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Footer links</div>
+
+  <div class="stack-md">
+    <div class="list-item" style="grid-template-columns: 80px 1fr auto;">
+      <strong>GitHub</strong>
+      <input type="text" id="footer-github-url" placeholder="https://github.com/..." value="{{ content.footer.github.url or '' }}">
+      <label class="toggle">
+        <input type="checkbox" id="footer-github-enabled" {% if content.footer.github.enabled %}checked{% endif %}>
+        <span class="track"></span>
+      </label>
+    </div>
+    <div class="list-item" style="grid-template-columns: 80px 1fr auto;">
+      <strong>Bluesky</strong>
+      <input type="text" id="footer-bluesky-url" placeholder="https://bsky.app/..." value="{{ content.footer.bluesky.url or '' }}">
+      <label class="toggle">
+        <input type="checkbox" id="footer-bluesky-enabled" {% if content.footer.bluesky.enabled %}checked{% endif %}>
+        <span class="track"></span>
+      </label>
+    </div>
+    <div class="list-item" style="grid-template-columns: 80px 1fr auto;">
+      <strong>Email</strong>
+      <input type="text" id="footer-email-addr" placeholder="hello@example.com" value="{{ content.footer.email.address or '' }}">
+      <label class="toggle">
+        <input type="checkbox" id="footer-email-enabled" {% if content.footer.email.enabled %}checked{% endif %}>
+        <span class="track"></span>
+      </label>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function saveFooter() {
+    const res = await saveJSON('/admin/footer', {
+      tagline: document.getElementById('footer-tagline').value,
+      year: parseInt(document.getElementById('footer-year').value) || new Date().getFullYear(),
+      github: {
+        url: document.getElementById('footer-github-url').value,
+        enabled: document.getElementById('footer-github-enabled').checked,
+      },
+      bluesky: {
+        url: document.getElementById('footer-bluesky-url').value,
+        enabled: document.getElementById('footer-bluesky-enabled').checked,
+      },
+      email: {
+        address: document.getElementById('footer-email-addr').value,
+        enabled: document.getElementById('footer-email-enabled').checked,
+      },
+    });
+    if (res.ok) showToast('✓ Footer saved');
+  }
+</script>
+{% endblock %}

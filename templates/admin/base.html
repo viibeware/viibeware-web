@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Admin{% endblock %} — viibeware</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ cache_v }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo.svg') }}">
+</head>
+<body>
+  <div class="admin-layout">
+    {% include 'admin/_sidebar.html' %}
+
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+          {% block page_subtitle %}{% endblock %}
+        </div>
+        <div class="page-actions">{% block page_actions %}{% endblock %}</div>
+      </div>
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <div class="flash-area" id="flash-area">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}"><span>{{ msg }}</span><button class="flash-dismiss" onclick="this.parentElement.remove()">×</button></div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  <script src="{{ url_for('static', filename='js/admin.js') }}?v={{ cache_v }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

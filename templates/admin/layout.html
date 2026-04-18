@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+{% block title %}Layout &amp; Sections{% endblock %}
+{% block page_title %}Layout &amp; Sections{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Drag to reorder. Toggle visibility. Edit label and subtitle for each section.</div>{% endblock %}
+{% block page_actions %}
+<button class="btn btn-primary" onclick="saveLayout()">Save layout</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">Sections</div>
+  <div class="card-sub">Each section renders somewhere on the public homepage. Drag the handle to reorder — top renders first.</div>
+
+  <div class="list" id="sections-list">
+    {% for sec in content.sections %}
+    <div class="list-item" draggable="true" data-id="{{ sec.id }}" data-type="{{ sec.type or 'custom' }}" data-product-id="{{ sec.product_id or '' }}"
+         style="grid-template-columns: 28px 1fr 1fr 1fr auto auto;">
+      <span class="drag-handle">⠿</span>
+      <div>
+        <div class="mono" style="font-size:0.78rem; color:var(--text-muted);">{{ sec.id }}</div>
+        <div><span class="chip muted">{{ sec.type or 'custom' }}</span>
+          {% if sec.product_id %}<span class="chip">{{ sec.product_id }}</span>{% endif %}
+        </div>
+      </div>
+      <input type="text" class="sec-label" placeholder="Label (optional)" value="{{ sec.label or '' }}">
+      <input type="text" class="sec-subtitle" placeholder="Subtitle (optional)" value="{{ sec.subtitle or '' }}">
+      <label class="toggle">
+        <input type="checkbox" class="sec-enabled" {% if sec.enabled %}checked{% endif %}>
+        <span class="track"></span>
+      </label>
+      <button class="list-item-remove" onclick="removeSection(this)" title="Remove section">×</button>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  enableDragReorder('#sections-list');
+
+  function removeSection(btn) {
+    if (!confirm('Remove this section from the layout? (The underlying content is kept; you can re-add the section later.)')) return;
+    btn.closest('.list-item').remove();
+  }
+
+  async function saveLayout() {
+    const items = [...document.querySelectorAll('#sections-list .list-item')].map(el => ({
+      id: el.dataset.id,
+      type: el.dataset.type || 'custom',
+      product_id: el.dataset.productId || undefined,
+      enabled: el.querySelector('.sec-enabled').checked,
+      label: el.querySelector('.sec-label').value,
+      subtitle: el.querySelector('.sec-subtitle').value,
+    }));
+    // Drop undefined product_id so sections without it stay clean
+    const cleaned = items.map(s => {
+      if (!s.product_id) delete s.product_id;
+      return s;
+    });
+    const res = await saveJSON('/admin/layout', cleaned);
+    if (res.ok) showToast('✓ Layout saved');
+  }
+</script>
+{% endblock %}

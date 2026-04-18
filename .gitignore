@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Secrets (use .env.example as the template)
+.env
+
+# Site content + user uploads — runtime data, never in source
+data/content.json
+data/content.pre-*.json
+data/content.live-*.json
+data/.version-refresh-lock
+static/uploads/*
+!static/uploads/.gitkeep
+
+# Legacy top-level uploads/ dir (from bare-metal era, replaced by static/uploads/)
+/uploads/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Claude Code local state
+.claude/
+
+# Build/packaging artefacts
+*.tar.gz
+dist/
+build/

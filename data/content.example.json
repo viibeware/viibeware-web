@@ -1,0 +1,175 @@
+{
+  "sections": [
+    {"id": "hero", "enabled": true},
+    {"id": "stats", "label": "", "subtitle": "", "enabled": true},
+    {"id": "about", "label": "// About", "subtitle": "", "enabled": true},
+    {"id": "product", "label": "// Our Magnum Opus", "subtitle": "", "enabled": true},
+    {"id": "download", "label": "// Deploy at Your Own Risk", "subtitle": "Install Garage Logbook (Seriously, It Works)", "enabled": true},
+    {"id": "product2", "label": "// Another One", "subtitle": "", "enabled": true},
+    {"id": "download2", "label": "// Ship It (If You Dare)", "subtitle": "Install Warehouse Manager", "enabled": true},
+    {"id": "metrics", "label": "", "subtitle": "Numbers We're Not Entirely Sure About", "enabled": true},
+    {"id": "testimonials", "label": "// Cries for Help, Mostly", "subtitle": "What People Say Behind Our Backs", "enabled": true}
+  ],
+  "hero": {
+    "headline": "We Don't Write Code. We Describe It to an AI and Hope for the Best.",
+    "subheadline": "viibeware Corp. is a software company in the loosest possible sense. We ship tools built almost entirely by LLMs, held together by caffeine, audacity, and an alarming number of Stack Overflow tabs we didn't actually read.",
+    "cta_primary": "See What We Shipped",
+    "cta_secondary": "Read the Source (We Dare You)"
+  },
+  "stats": [
+    {"value": "12K+", "label": "Prompts to Get Here", "icon": "users"},
+    {"value": "99.97%", "label": "AI-Generated Code", "icon": "server"},
+    {"value": "4.2M", "label": "Tokens Burned", "icon": "zap"},
+    {"value": "380+", "label": "Claude Conversations", "icon": "star"},
+    {"value": "< 50ms", "label": "Time We Spend Reading Output", "icon": "clock"},
+    {"value": "23", "label": "Bugs We Call Features", "icon": "globe"},
+    {"value": "0", "label": "Lines Written by a Human", "icon": "git-branch"},
+    {"value": "1", "label": "Guy Running All of This", "icon": "package"}
+  ],
+  "about": {
+    "title": "Who We Are (Sort Of)",
+    "body": "viibeware Corp. was founded on the radical premise that you don't need to know how to code to start a software company. You just need a credit card, an Anthropic API key, and the unshakeable delusion that typing 'make it work' into a chat window counts as engineering. We build self-hosted, privacy-first tools — not because we're idealists, but because we genuinely cannot figure out how to set up a cloud deployment pipeline. Our entire tech stack was chosen by an AI. Our architecture decisions are whatever Claude suggested first. Our test suite is 'click around and see if it explodes.' And somehow, against all odds and good taste, the software actually works. We're as surprised as you are.",
+    "principles": [
+      {"title": "Self-Hosted by Necessity", "desc": "We'd love to offer a cloud version, but that would require us to understand networking. So your server it is."},
+      {"title": "Open Source (We Need Your Help)", "desc": "Every product ships with full source code. Please, for the love of god, open a pull request. We're in over our heads."},
+      {"title": "No Telemetry (We Wouldn't Know How)", "desc": "We don't track you because implementing analytics was going to be a whole separate conversation with Claude and honestly we got tired."},
+      {"title": "Vibes Over Velocity", "desc": "We don't ship fast. We don't ship clean. But we do ship, eventually, and it usually only catches fire a little bit."}
+    ]
+  },
+  "product": {
+    "name": "Garage Logbook",
+    "version": "latest",
+    "logo": "img/garage-logbook-logo.svg",
+    "featured_image": "img/screenshot-1.png",
+    "screenshots": [
+      "img/screenshot-1.png",
+      "",
+      ""
+    ],
+    "tagline": "A car maintenance tracker that an AI wrote and a human pointed at a server.",
+    "description": "Garage Logbook is what happens when you tell an LLM 'build me a car maintenance app' seventeen times until something works. It tracks your vehicles, service history, and upcoming maintenance — all stored in a SQLite database because we asked Claude what database to use and it said SQLite and we said 'sure, sounds good.' It has role-based auth, dark mode, CSV export, and an alarming amount of confidence for software that was born from vibes alone.",
+    "features": [
+      "Multi-vehicle support (we think — we only tested with two)",
+      "Service history timeline that Claude designed on the first try, somehow",
+      "Maintenance reminders so your car lasts longer than our codebase",
+      "Role-based auth that definitely doesn't have any security holes (please don't check)",
+      "CSV import & export, because we couldn't figure out a real API",
+      "Dark mode, because every vibe-coded app needs to hide in the shadows",
+      "SQLite — zero config, zero dependencies, zero understanding of why it works",
+      "A settings page we added because the UI felt empty without one"
+    ],
+    "tech_stack": ["Python 3.10+", "Flask", "SQLite", "Jinja2", "Bootstrap 5"],
+    "repo_links": {
+      "github": {"url": "https://github.com/viibeware/garage-logbook", "label": "GitHub", "enabled": true},
+      "dockerhub": {"url": "https://hub.docker.com/r/viibeware/garage-logbook", "label": "Docker Hub", "enabled": true}
+    },
+    "install_tabs": {
+      "docker": {"enabled": true, "label": "Docker Compose (Recommended-ish)"},
+      "quickrun": {"enabled": true, "label": "YOLO Mode"},
+      "manual": {"enabled": true, "label": "The Hard Way"}
+    },
+    "install_steps": [
+      {"step": 1, "title": "Clone the Repository", "desc": "Grab the code. Don't look at it too closely. Trust the process. Trust the vibes.", "cmd": "git clone https://github.com/viibeware/garage-logbook.git\ncd garage-logbook"},
+      {"step": 2, "title": "Create a Virtual Environment", "desc": "Isolate this from the rest of your system. It's safer that way. For everyone.", "cmd": "python3 -m venv venv\nsource venv/bin/activate"},
+      {"step": 3, "title": "Install Dependencies", "desc": "Let pip download whatever Claude decided we needed. We haven't audited the dependency tree. We don't plan to.", "cmd": "pip install -r requirements.txt"},
+      {"step": 4, "title": "Initialize the Database", "desc": "This creates the SQLite file. If this step fails, we honestly don't know what to tell you.", "cmd": "flask db-init"},
+      {"step": 5, "title": "Run the Application", "desc": "Fire it up and pray. Flask will tell you if something's wrong. We won't.", "cmd": "flask run --host=0.0.0.0 --port=5000"},
+      {"step": 6, "title": "Access the App", "desc": "If you see a login page, congratulations — the vibes worked. Change the default password unless you enjoy living dangerously.", "cmd": "# Open your browser to:\n# http://localhost:5000\n# Default admin: admin / changeme"}
+    ],
+    "docker_steps": [
+      {"step": 1, "title": "Create a Project Directory", "desc": "Make a folder. This is the one step we're fully confident about.", "cmd": "mkdir -p ~/garage-logbook && cd ~/garage-logbook"},
+      {"step": 2, "title": "Generate a Secret Key", "desc": "Flask needs a secret key for session security. This is real cryptography, so we let Python handle it because we sure as hell aren't rolling our own.", "cmd": "python3 -c \"import secrets; print(secrets.token_hex(32))\""},
+      {"step": 3, "title": "Create the Environment File", "desc": "Paste your generated key into a .env file along with admin credentials. Don't commit this to git. We know you're going to commit this to git. Please don't commit this to git.", "cmd": "# Create ~/garage-logbook/.env\n\nSECRET_KEY=paste_your_generated_key_here\nADMIN_USER=admin\nADMIN_PASS=choose_a_strong_password\nFLASK_ENV=production"},
+      {"step": 4, "title": "Create the Docker Compose File", "desc": "This is the crown jewel — a compose file that Claude wrote, we copy-pasted, and Docker apparently accepts. Persistent volumes, health checks, auto-restart. We didn't know what half of this did when we shipped it.", "cmd": "# ~/garage-logbook/docker-compose.yml\n\nservices:\n  garage-logbook:\n    image: viibeware/garage-logbook:latest\n    container_name: garage-logbook\n    ports:\n      - \"5000:5000\"\n    volumes:\n      - garage-data:/app/data\n      - garage-uploads:/app/static/uploads\n    env_file:\n      - .env\n    restart: unless-stopped\n    healthcheck:\n      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:5000\"]\n      interval: 30s\n      timeout: 10s\n      retries: 3\n      start_period: 10s\n\nvolumes:\n  garage-data:\n    driver: local\n  garage-uploads:\n    driver: local"},
+      {"step": 5, "title": "Deploy the Stack", "desc": "The moment of truth. Run this command and Docker will pull our image from the registry, assuming we remembered to push it. Fingers crossed.", "cmd": "cd ~/garage-logbook\ndocker compose up -d"},
+      {"step": 6, "title": "Verify the Deployment", "desc": "Check that the container didn't immediately crash. If the status says 'healthy,' we're both shocked and delighted.", "cmd": "# Check container status\ndocker compose ps\n\n# View live logs\ndocker compose logs -f garage-logbook"},
+      {"step": 7, "title": "Access Garage Logbook", "desc": "Navigate to port 5000 in your browser. If it loads, you have successfully deployed software that no human fully understands. Welcome to the future.", "cmd": "# Open in your browser:\n# http://your-server-ip:5000\n#\n# Log in with the credentials\n# from your .env file"}
+    ],
+    "quickrun_steps": [
+      {"step": 1, "title": "The YOLO Deploy", "desc": "For the brave, the impatient, or the reckless. This single command skips all the responsible setup steps and just runs the thing. Default credentials, auto-generated secret key, no environment file. Will it work? Probably. Should you use this in production? Absolutely not. Will you anyway? We know our audience.", "cmd": "docker run -d \\\n  --name garage-logbook \\\n  -p 5000:5000 \\\n  -v garage-data:/app/data \\\n  -v garage-uploads:/app/static/uploads \\\n  -e SECRET_KEY=$(python3 -c \"import secrets; print(secrets.token_hex(32))\") \\\n  -e ADMIN_USER=admin \\\n  -e ADMIN_PASS=changeme \\\n  --restart unless-stopped \\\n  viibeware/garage-logbook:latest"},
+      {"step": 2, "title": "See If It's Alive", "desc": "Open your browser. If you see a login page, it worked. Change the password immediately. Or don't. We're a README, not a cop.", "cmd": "# http://localhost:5000\n# Username: admin\n# Password: changeme\n#\n# (please change this)"}
+    ]
+  },
+  "product2": {
+    "name": "Warehouse Manager",
+    "version": "latest",
+    "logo": "",
+    "featured_image": "",
+    "screenshots": ["", "", ""],
+    "tagline": "An automotive parts inventory system that Claude hallucinated into existence.",
+    "description": "Warehouse Manager started as a 'hey, can you build me an inventory app?' and somehow became a full parts management system with engines, cylinder heads, transmissions, and natural alphanumeric sorting that we had to fix Python-side because Gunicorn and SQLite don't agree on what 'alphabetical' means. It tracks your parts, costs, locations, and quantities — because apparently a spreadsheet wasn't good enough for us, but also we couldn't figure out how to use a real ERP.",
+    "features": [
+      "Engine, cylinder head, and transmission tracking — because we're very specific about our hoarding",
+      "Natural alphanumeric sorting (this took an embarrassingly long time to get right)",
+      "Role-based auth with admin, editor, and viewer roles — the viewer role was Claude's idea",
+      "CSV import & export — our universal data strategy because APIs are hard",
+      "Dark mode UI that matches all our other apps because consistency is the one thing we got right",
+      "SQLite database — we have a type",
+      "Search and filter across all part categories",
+      "Photo uploads for parts, because words alone can't describe a used intake manifold"
+    ],
+    "tech_stack": ["Python 3.10+", "Flask", "SQLite", "Jinja2", "Bootstrap 5"],
+    "repo_links": {
+      "github": {"url": "https://github.com/viibeware/warehouse-manager", "label": "GitHub", "enabled": true},
+      "dockerhub": {"url": "https://hub.docker.com/r/viibeware/warehouse-manager", "label": "Docker Hub", "enabled": true}
+    },
+    "install_tabs": {
+      "docker": {"enabled": true, "label": "Docker Compose (Recommended-ish)"},
+      "quickrun": {"enabled": true, "label": "YOLO Mode"},
+      "manual": {"enabled": true, "label": "The Hard Way"}
+    },
+    "install_steps": [
+      {"step": 1, "title": "Clone the Repository", "desc": "Grab the code. It's basically the same stack as Garage Logbook. We have one trick and we're sticking with it.", "cmd": "git clone https://github.com/viibeware/warehouse-manager.git\ncd warehouse-manager"},
+      {"step": 2, "title": "Create a Virtual Environment", "desc": "Same drill. Isolate the chaos.", "cmd": "python3 -m venv venv\nsource venv/bin/activate"},
+      {"step": 3, "title": "Install Dependencies", "desc": "Claude picked these. We trust Claude. Mostly.", "cmd": "pip install -r requirements.txt"},
+      {"step": 4, "title": "Initialize the Database", "desc": "Creates all the tables for engines, heads, transmissions, and whatever else we added at 2am.", "cmd": "flask db-init"},
+      {"step": 5, "title": "Run the Application", "desc": "Light the fuse.", "cmd": "flask run --host=0.0.0.0 --port=5001"},
+      {"step": 6, "title": "Access the App", "desc": "If you see parts categories, you're in business. Literally.", "cmd": "# Open your browser to:\n# http://localhost:5001\n# Default admin: admin / changeme"}
+    ],
+    "docker_steps": [
+      {"step": 1, "title": "Create a Project Directory", "desc": "You know the drill by now.", "cmd": "mkdir -p ~/warehouse-manager && cd ~/warehouse-manager"},
+      {"step": 2, "title": "Generate a Secret Key", "desc": "Same cryptography song and dance. Python does the hard part.", "cmd": "python3 -c \"import secrets; print(secrets.token_hex(32))\""},
+      {"step": 3, "title": "Create the Environment File", "desc": "Paste your key. Set your creds. Don't commit to git. (You're going to commit it to git.)", "cmd": "# Create ~/warehouse-manager/.env\n\nSECRET_KEY=paste_your_generated_key_here\nADMIN_USER=admin\nADMIN_PASS=choose_a_strong_password\nFLASK_ENV=production"},
+      {"step": 4, "title": "Create the Docker Compose File", "desc": "It's the same compose template as Garage Logbook with different names. We're not sorry.", "cmd": "# ~/warehouse-manager/docker-compose.yml\n\nservices:\n  warehouse-manager:\n    image: viibeware/warehouse-manager:latest\n    container_name: warehouse-manager\n    ports:\n      - \"5001:5001\"\n    volumes:\n      - warehouse-data:/app/data\n      - warehouse-uploads:/app/static/uploads\n    env_file:\n      - .env\n    restart: unless-stopped\n    healthcheck:\n      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:5001\"]\n      interval: 30s\n      timeout: 10s\n      retries: 3\n      start_period: 10s\n\nvolumes:\n  warehouse-data:\n    driver: local\n  warehouse-uploads:\n    driver: local"},
+      {"step": 5, "title": "Deploy the Stack", "desc": "Launch it. Cross your fingers. You know the routine.", "cmd": "cd ~/warehouse-manager\ndocker compose up -d"},
+      {"step": 6, "title": "Verify the Deployment", "desc": "Check that it's alive and not immediately on fire.", "cmd": "# Check container status\ndocker compose ps\n\n# View live logs\ndocker compose logs -f warehouse-manager"},
+      {"step": 7, "title": "Access Warehouse Manager", "desc": "Port 5001 this time. We learned not to collide ports after the Incident.", "cmd": "# Open in your browser:\n# http://your-server-ip:5001\n#\n# Log in with the credentials\n# from your .env file"}
+    ],
+    "quickrun_steps": [
+      {"step": 1, "title": "The YOLO Deploy", "desc": "One command. Default everything. No regrets. (Some regrets.)", "cmd": "docker run -d \\\n  --name warehouse-manager \\\n  -p 5001:5001 \\\n  -v warehouse-data:/app/data \\\n  -v warehouse-uploads:/app/static/uploads \\\n  -e SECRET_KEY=$(python3 -c \"import secrets; print(secrets.token_hex(32))\") \\\n  -e ADMIN_USER=admin \\\n  -e ADMIN_PASS=changeme \\\n  --restart unless-stopped \\\n  viibeware/warehouse-manager:latest"},
+      {"step": 2, "title": "See If It's Alive", "desc": "Port 5001. Login. Catalogue your parts. Question your life choices.", "cmd": "# http://localhost:5001\n# Username: admin\n# Password: changeme\n#\n# (please change this)"}
+    ]
+  },
+  "metrics_dashboard": {
+    "title": "Probably Real Metrics",
+    "entries": [
+      {"label": "Prompts to Ship Latest", "value": "1,847", "change": "+12%", "direction": "up"},
+      {"label": "Bugs Closed (by Claude)", "value": "234", "change": "+8%", "direction": "up"},
+      {"label": "Avg Time to Ask Claude", "value": "18s", "change": "-23%", "direction": "down"},
+      {"label": "Code We Actually Understand", "value": "6.2%", "change": "-1.4%", "direction": "down"},
+      {"label": "Docker Pulls (Allegedly)", "value": "89.4K", "change": "+31%", "direction": "up"},
+      {"label": "Open Issues We're Ignoring", "value": "17", "change": "+3", "direction": "up"}
+    ]
+  },
+  "testimonials": [
+    {"quote": "I read the source code expecting a disaster. It's actually... fine? I'm more unsettled by that than if it had been bad.", "author": "Marcus R.", "role": "Deeply Confused Engineer"},
+    {"quote": "Deployed it on my home server. It's been running for three months without issues. I keep checking on it like it's a sourdough starter that shouldn't be alive.", "author": "Sarah K.", "role": "Skeptical SysAdmin"},
+    {"quote": "I asked them for a feature and they shipped it in 20 minutes. Then I realized they just pasted my request into Claude. Honestly? Still faster than my last vendor.", "author": "Jake T.", "role": "Accidentally Satisfied Customer"}
+  ],
+  "footer": {
+    "tagline": "Held together by vibes, duct tape, and an Anthropic subscription.",
+    "github": {"url": "https://github.com/viibeware", "enabled": true},
+    "email": {"address": "hello@viibeware.dev", "enabled": true},
+    "bluesky": {"url": "https://bsky.app/profile/viibeware.dev", "enabled": false},
+    "year": 2026
+  },
+  "nav": {
+    "links": [
+      {"label": "Home", "href": "#hero"},
+      {"label": "About", "href": "#about"},
+      {"label": "Products", "href": "#product"},
+      {"label": "Metrics", "href": "#metrics"},
+      {"label": "Download", "href": "#download"}
+    ]
+  }
+}

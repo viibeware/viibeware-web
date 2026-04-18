@@ -1,0 +1,14 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+venv
+*.tar.gz
+data/content.json
+data/content.pre-*.json
+static/uploads/
+README.md
+CHANGELOG.md
+LICENSE
+.env

@@ -1,0 +1,70 @@
+{% extends "admin/base.html" %}
+{% block title %}Navigation{% endblock %}
+{% block page_title %}Header Navigation{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Links shown in the public site header. Icon value <code>github</code> or <code>dockerhub</code> renders a branded SVG instead of text.</div>{% endblock %}
+{% block page_actions %}
+<button class="btn" onclick="addNavLink()">+ Add link</button>
+<button class="btn btn-primary" onclick="saveNav()">Save</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="list" id="nav-list">
+    {% for link in content.nav.links %}
+    <div class="list-item" draggable="true" style="grid-template-columns: 28px 2fr 3fr 160px auto;">
+      <span class="drag-handle">⠿</span>
+      <input type="text" class="nav-label" placeholder="Label" value="{{ link.label or '' }}">
+      <input type="text" class="nav-href" placeholder="URL or #anchor" value="{{ link.href or '' }}">
+      <select class="nav-icon">
+        <option value="" {% if not link.icon %}selected{% endif %}>Text link (no icon)</option>
+        <option value="github" {% if link.icon == 'github' %}selected{% endif %}>GitHub icon</option>
+        <option value="dockerhub" {% if link.icon == 'dockerhub' %}selected{% endif %}>Docker Hub icon</option>
+      </select>
+      <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% if not content.nav.links %}
+  <div class="text-muted" id="nav-empty">No nav links yet. Use "Add link" above.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  enableDragReorder('#nav-list');
+
+  function addNavLink() {
+    const empty = document.getElementById('nav-empty');
+    if (empty) empty.remove();
+    const list = document.getElementById('nav-list');
+    const row = document.createElement('div');
+    row.className = 'list-item';
+    row.draggable = true;
+    row.style.gridTemplateColumns = '28px 2fr 3fr 160px auto';
+    row.innerHTML = `
+      <span class="drag-handle">⠿</span>
+      <input type="text" class="nav-label" placeholder="Label">
+      <input type="text" class="nav-href" placeholder="URL or #anchor">
+      <select class="nav-icon">
+        <option value="">Text link (no icon)</option>
+        <option value="github">GitHub icon</option>
+        <option value="dockerhub">Docker Hub icon</option>
+      </select>
+      <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+    `;
+    list.appendChild(row);
+    row.querySelector('.nav-label').focus();
+  }
+
+  async function saveNav() {
+    const links = [...document.querySelectorAll('#nav-list .list-item')].map(el => ({
+      label: el.querySelector('.nav-label').value.trim(),
+      href: el.querySelector('.nav-href').value.trim(),
+      icon: el.querySelector('.nav-icon').value.trim(),
+    })).filter(l => l.label || l.href);
+    const res = await saveJSON('/admin/navigation', { links });
+    if (res.ok) showToast('✓ Navigation saved');
+  }
+</script>
+{% endblock %}

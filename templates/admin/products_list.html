@@ -1,0 +1,93 @@
+{% extends "admin/base.html" %}
+{% block title %}Products{% endblock %}
+{% block page_title %}Products{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Each product shows on the homepage with its own product + install sections. Add, edit, or remove as needed.</div>{% endblock %}
+{% block page_actions %}
+<button class="btn btn-primary" onclick="openNewProductDialog()">+ New product</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if content.products %}
+  <table class="table">
+    <thead>
+      <tr><th>Product</th><th>Version</th><th>Features</th><th>Screenshots</th><th>Repos</th><th>Install tabs</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for p in content.products %}
+      <tr>
+        <td>
+          <strong>{{ p.name or p.id }}</strong>
+          <div class="text-muted mono" style="font-size:0.72rem;">id: {{ p.id }}</div>
+          {% if p.tagline %}<div class="text-muted" style="font-size:0.82rem; margin-top:0.25rem;">{{ p.tagline }}</div>{% endif %}
+        </td>
+        <td>{{ p.version or '—' }}</td>
+        <td>{{ p.features|length }}</td>
+        <td>{{ p.screenshots|select|list|length }}</td>
+        <td>{{ p.repo_links|selectattr('enabled')|list|length }} / {{ p.repo_links|length }}</td>
+        <td>{{ p.install_tabs|selectattr('enabled')|list|length }} / {{ p.install_tabs|length }}</td>
+        <td class="actions">
+          <a href="{{ url_for('admin_product_edit', product_id=p.id) }}" class="btn btn-sm">Edit</a>
+          <button class="btn btn-sm btn-danger" onclick="deleteProduct('{{ p.id }}', '{{ p.name|e }}')">Delete</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="text-muted" style="padding: 2rem 0; text-align: center;">
+    No products yet. Click "New product" to create your first one.
+  </div>
+  {% endif %}
+</div>
+
+<div id="new-product-dialog" class="hidden" style="position:fixed; inset:0; background:rgba(6,6,14,0.85); z-index:2000; display:flex; align-items:center; justify-content:center; padding:2rem;">
+  <div style="background: var(--bg-panel); border:1px solid var(--border); border-radius:14px; padding: 2rem; width: 100%; max-width: 480px;">
+    <div class="card-title">New product</div>
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="new-product-name" placeholder="My Amazing App" autofocus>
+    </div>
+    <div class="field">
+      <label>ID (slug, optional — auto-generated from name if blank)</label>
+      <input type="text" id="new-product-id" placeholder="my-amazing-app" class="mono">
+      <div class="hint">Used in URLs and referenced by sections. Lowercase letters, numbers, and dashes only.</div>
+    </div>
+    <div class="row">
+      <button class="btn" onclick="closeNewProductDialog()">Cancel</button>
+      <button class="btn btn-primary" onclick="createProduct()">Create</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openNewProductDialog() {
+    document.getElementById('new-product-dialog').classList.remove('hidden');
+    document.getElementById('new-product-name').focus();
+  }
+  function closeNewProductDialog() {
+    document.getElementById('new-product-dialog').classList.add('hidden');
+    document.getElementById('new-product-name').value = '';
+    document.getElementById('new-product-id').value = '';
+  }
+  async function createProduct() {
+    const name = document.getElementById('new-product-name').value.trim();
+    const id = document.getElementById('new-product-id').value.trim();
+    if (!name) { showToast('Enter a product name', 'error'); return; }
+    const res = await saveJSON('/admin/products/new', { name, id });
+    if (res.ok && res.data && res.data.id) {
+      window.location.href = `/admin/products/${res.data.id}`;
+    }
+  }
+  async function deleteProduct(id, name) {
+    if (!confirm(`Delete "${name || id}"?\n\nThe product and any sections referencing it will be removed. Uploaded images are kept.`)) return;
+    const res = await saveJSON(`/admin/products/${id}/delete`, {});
+    if (res.ok) {
+      showToast('✓ Deleted');
+      setTimeout(() => window.location.reload(), 500);
+    }
+  }
+</script>
+{% endblock %}

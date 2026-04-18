@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>viibeware Corp. — We Don't Write Code</title>
+  <meta name="description" content="{{ content.og.description | default('viibeware Corp. ships software built by AI. We just point it at problems and hope for the best.') }}">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ content.og.url | default('https://viibeware.com') }}">
+  <meta property="og:title" content="{{ content.og.title | default('viibeware Corp. — We Don\'t Write Code') }}">
+  <meta property="og:description" content="{{ content.og.description | default('viibeware Corp. ships software built by AI. We just point it at problems and hope for the best.') }}">
+  <meta property="og:image" content="{{ content.og.url | default('https://viibeware.com') }}/static/{{ content.og.image | default('img/og-image.png') }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="viibeware Corp.">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ content.og.title | default('viibeware Corp. — We Don\'t Write Code') }}">
+  <meta name="twitter:description" content="{{ content.og.description | default('viibeware Corp. ships software built by AI. We just point it at problems and hope for the best.') }}">
+  <meta name="twitter:image" content="{{ content.og.url | default('https://viibeware.com') }}/static/{{ content.og.image | default('img/og-image.png') }}">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_v }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo.svg') }}">
+</head>
+<body>
+
+  {% from "macros.html" import render_product, render_install, github_svg, dockerhub_svg %}
+
+  <!-- ═══ Navigation ═══ -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#hero" class="nav-logo">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="viibeware logo">
+        <span><em>viibe</em>ware</span>
+      </a>
+      <ul class="nav-links">
+        {% for link in content.nav.links %}
+        <li>
+          {% if link.icon == 'github' %}
+          <a href="{{ link.href }}" target="_blank" rel="noopener" aria-label="{{ link.label }}" class="nav-icon-link">{{ github_svg }}</a>
+          {% elif link.icon == 'dockerhub' %}
+          <a href="{{ link.href }}" target="_blank" rel="noopener" aria-label="{{ link.label }}" class="nav-icon-link">{{ dockerhub_svg }}</a>
+          {% else %}
+          <a href="{{ link.href }}">{{ link.label }}</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <button class="nav-hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  {% set products_by_id = {} %}
+  {% for p in content.products %}{% set _ = products_by_id.update({p.id: p}) %}{% endfor %}
+
+  {% for sec in content.sections %}
+  {% if sec.enabled %}
+
+    {# ── HERO ── #}
+    {% if sec.type == 'hero' %}
+    <section class="hero" id="hero" data-section="hero">
+      <div class="hero-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="hero-grid"></div>
+      </div>
+      <div class="hero-content">
+        <div class="hero-logo-ring reveal">
+          <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="viibeware">
+        </div>
+        <h1 class="reveal reveal-delay-1">{{ content.hero.headline }}</h1>
+        <p class="reveal reveal-delay-2">{{ content.hero.subheadline }}</p>
+        <div class="hero-actions reveal reveal-delay-3">
+          <a href="#{{ content.hero.cta_primary_href or 'products' }}" class="btn btn-primary">{{ content.hero.cta_primary }} →</a>
+          <a href="#{{ content.hero.cta_secondary_href or 'install' }}" class="btn btn-outline">{{ content.hero.cta_secondary }}</a>
+        </div>
+      </div>
+    </section>
+
+    {# ── ABOUT ── #}
+    {% elif sec.type == 'about' %}
+    <section id="about" data-section="about">
+      <div class="section">
+        {% if sec.label %}<div class="section-label reveal">{{ sec.label }}</div>{% endif %}
+        <div class="section-title reveal reveal-delay-1">{{ content.about.title }}</div>
+        <div class="about-grid">
+          <div class="about-text reveal reveal-delay-2">{{ content.about.body }}</div>
+          <div class="values-grid">
+            {% for val in content.about.principles %}
+            <div class="value-card reveal reveal-delay-{{ loop.index }}">
+              <h4>{{ val.title }}</h4>
+              <p>{{ val.desc }}</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ── PRODUCT ── #}
+    {% elif sec.type == 'product' %}
+    {% set prod = products_by_id.get(sec.product_id) %}
+    {% if prod %}{{ render_product(prod, sec) }}{% endif %}
+
+    {# ── INSTALL ── #}
+    {% elif sec.type == 'install' %}
+    {% set prod = products_by_id.get(sec.product_id) %}
+    {% if prod %}{{ render_install(prod, sec, sec.id) }}{% endif %}
+
+    {% endif %}
+  {% endif %}
+  {% endfor %}
+
+  <!-- ═══ Footer ═══ -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-tagline">{{ content.footer.tagline }}</div>
+      <div class="footer-links">
+        {% if content.footer.github.enabled %}
+        <a href="{{ content.footer.github.url }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
+          GitHub
+        </a>
+        {% endif %}
+        {% if content.footer.bluesky.enabled %}
+        <a href="{{ content.footer.bluesky.url }}">
+          <svg width="18" height="18" viewBox="0 0 600 530" fill="currentColor"><path d="M135.72 44.03C202.216 93.951 273.74 195.17 300 249.49c26.262-54.316 97.782-155.54 164.28-205.46C512.26 8.009 590-19.862 590 68.825c0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.38-3.69-10.832-3.708-7.896-.017-2.936-1.193.516-3.707 7.896-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.256 82.697-152.22-67.108 11.421-142.549-7.449-163.25-81.433C20.15 217.613 10 86.536 10 68.824c0-88.687 77.742-60.816 125.72-24.795z"/></svg>
+          Bluesky
+        </a>
+        {% endif %}
+        {% if content.footer.email.enabled %}
+        <a href="mailto:{{ content.footer.email.address }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          Contact
+        </a>
+        {% endif %}
+        <a href="/admin">Admin</a>
+      </div>
+      <div class="footer-copy">© {{ content.footer.year }} viibeware Corp. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <!-- ═══ Lightbox ═══ -->
+  <div id="lightbox" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(6,6,14,0.95); align-items:center; justify-content:center; padding:2rem; cursor:pointer;">
+    <button onclick="document.getElementById('lightbox').style.display='none'; document.body.style.overflow='';" style="position:absolute; top:1.5rem; right:1.5rem; width:44px; height:44px; background:#0c0c1a; border:1px solid #1a1a3e; border-radius:12px; color:#e8e8f0; font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:1;">×</button>
+    <img id="lightbox-img" src="" alt="Screenshot" style="max-width:90vw; max-height:90vh; object-fit:contain; border-radius:12px; border:1px solid #1a1a3e; box-shadow:0 0 60px rgba(0,242,255,0.15);">
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}?v={{ cache_v }}"></script>
+  <script>
+    // Lightbox — handles screenshot thumbs and featured images
+    document.querySelectorAll('.screenshot-thumb, .product-featured-image').forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        const src = thumb.dataset.full;
+        const lb = document.getElementById('lightbox');
+        document.getElementById('lightbox-img').src = src;
+        lb.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    document.getElementById('lightbox').addEventListener('click', e => {
+      if (e.target.id === 'lightbox') {
+        e.target.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        document.getElementById('lightbox').style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    });
+  </script>
+</body>
+</html>

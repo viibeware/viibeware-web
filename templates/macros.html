@@ -1,0 +1,134 @@
+{# ── SVG Icons ── #}
+{% set github_svg %}
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
+{% endset %}
+{% set dockerhub_svg %}
+<svg width="20" height="18" viewBox="0 0 24 19" fill="currentColor"><path d="M13.983 11.078h2.119a.186.186 0 0 0 .186-.185V9.006a.186.186 0 0 0-.186-.186h-2.119a.185.185 0 0 0-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 0 0 .186-.186V3.574a.186.186 0 0 0-.186-.185h-2.118a.185.185 0 0 0-.185.185v1.888c0 .102.082.185.185.186m0 2.716h2.118a.187.187 0 0 0 .186-.186V6.29a.186.186 0 0 0-.186-.185h-2.118a.185.185 0 0 0-.185.185v1.887c0 .102.082.186.185.186m-2.93 0h2.12a.186.186 0 0 0 .184-.186V6.29a.185.185 0 0 0-.185-.185H8.1a.185.185 0 0 0-.185.185v1.887c0 .102.083.186.185.186m-2.964 0h2.119a.186.186 0 0 0 .185-.186V6.29a.185.185 0 0 0-.185-.185H5.136a.186.186 0 0 0-.186.185v1.887c0 .102.084.186.186.186m5.893 2.715h2.118a.186.186 0 0 0 .186-.185V9.006a.186.186 0 0 0-.186-.186h-2.118a.185.185 0 0 0-.185.185v1.888c0 .102.082.185.185.185m-2.93 0h2.12a.185.185 0 0 0 .184-.185V9.006a.185.185 0 0 0-.184-.186h-2.12a.185.185 0 0 0-.184.185v1.888c0 .102.083.185.185.185m-2.964 0h2.119a.185.185 0 0 0 .185-.185V9.006a.185.185 0 0 0-.185-.186H5.136a.186.186 0 0 0-.186.185v1.888c0 .102.084.185.186.185m-2.92 0h2.12a.185.185 0 0 0 .184-.185V9.006a.185.185 0 0 0-.184-.186h-2.12a.185.185 0 0 0-.184.186v1.887c0 .102.082.185.185.185M23.763 9.89c-.065-.051-.672-.51-1.954-.51-.338.001-.676.03-1.01.087-.248-1.7-1.653-2.53-1.716-2.566l-.344-.199-.226.327c-.284.438-.49.922-.612 1.43-.23.97-.09 1.882.403 2.661-.595.332-1.55.413-1.744.42H.751a.751.751 0 0 0-.75.748 11.687 11.687 0 0 0 .692 4.062c.545 1.428 1.355 2.48 2.41 3.124 1.18.723 3.1 1.137 5.275 1.137.983.003 1.963-.086 2.93-.266a12.228 12.228 0 0 0 3.823-1.389c.98-.567 1.86-1.288 2.61-2.136 1.252-1.418 1.998-2.997 2.553-4.4h.221c1.372 0 2.215-.549 2.68-1.009.309-.293.55-.65.707-1.046l.098-.288Z"/></svg>
+{% endset %}
+
+{# ── Repo link macro ── chooses a known SVG icon by link.icon, else shows label only. #}
+{% macro render_repo_link(link) %}
+{% if link.enabled and link.url %}
+<a href="{{ link.url }}" class="repo-link" target="_blank" rel="noopener">
+  {% if link.icon == 'github' %}{{ github_svg }}
+  {% elif link.icon == 'dockerhub' %}{{ dockerhub_svg }}
+  {% endif %}
+  {{ link.label }}
+</a>
+{% endif %}
+{% endmacro %}
+
+{# ── Product Showcase Macro ── #}
+{% macro render_product(prod, sec) %}
+<section class="product-section" id="{{ sec.id }}" data-section="{{ sec.id }}">
+  <div class="section">
+    {% if sec.label %}<div class="section-label reveal">{{ sec.label }}</div>{% endif %}
+    {% if sec.subtitle %}<div class="section-title reveal reveal-delay-1">{{ sec.subtitle }}</div>{% endif %}
+
+    <div class="product-showcase reveal">
+      <div class="product-info">
+        <div class="product-logo-row">
+          {% if prod.logo %}
+          {% set logo_px = prod.logo_size | default(80) | int %}
+          <img src="{{ url_for('static', filename=prod.logo) }}" alt="{{ prod.name }}" class="product-logo-img"
+               style="width: {{ logo_px }}px; height: {{ logo_px }}px;">
+          {% endif %}
+          <div>
+            <div class="product-name"{% if prod.title_size and prod.title_size|int > 0 %} style="font-size: {{ prod.title_size | int }}px;"{% endif %}>
+              <span class="accent">{{ prod.name }}</span>
+            </div>
+            {% if prod.version %}<div class="product-version">v{{ prod.version }}</div>{% endif %}
+          </div>
+        </div>
+        {% if prod.tagline %}<div class="product-tagline">{{ prod.tagline }}</div>{% endif %}
+        {% if prod.description %}<p class="product-desc">{{ prod.description }}</p>{% endif %}
+        {% if prod.tech_stack %}
+        <div class="tech-stack">
+          {% for tech in prod.tech_stack %}
+          <span class="tech-badge">{{ tech }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% set enabled_links = prod.repo_links | selectattr('enabled') | selectattr('url') | list %}
+        {% if enabled_links %}
+        <div class="product-repo-links">
+          {% for link in enabled_links %}
+          {{ render_repo_link(link) }}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% if prod.featured_image %}
+      <div class="product-featured-image" data-full="{{ url_for('static', filename=prod.featured_image) }}">
+        <img src="{{ url_for('static', filename=prod.featured_image) }}" alt="{{ prod.name }} screenshot" loading="lazy">
+        <div class="screenshot-zoom">⤢</div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if prod.features %}
+    <div class="product-features-grid reveal reveal-delay-2">
+      {% for feat in prod.features %}
+      <div class="feature-item">
+        <span class="feature-check">✓</span>
+        <span>{{ feat }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% set screenshots = prod.screenshots | select | list %}
+    {% if screenshots %}
+    <div class="screenshot-gallery reveal reveal-delay-3">
+      {% for src in screenshots %}
+      <div class="screenshot-thumb" data-full="{{ url_for('static', filename=src) }}">
+        <img src="{{ url_for('static', filename=src) }}" alt="Screenshot {{ loop.index }}" loading="lazy">
+        <div class="screenshot-zoom">⤢</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endmacro %}
+
+{# ── Install Section Macro ── #}
+{% macro render_install(prod, sec, id_suffix) %}
+{% set enabled_tabs = prod.install_tabs | selectattr('enabled') | list %}
+<section id="{{ sec.id }}" data-section="{{ sec.id }}">
+  <div class="section">
+    {% if sec.label %}<div class="section-label reveal">{{ sec.label }}</div>{% endif %}
+    {% if sec.subtitle %}<div class="section-title reveal reveal-delay-1">{{ sec.subtitle }}</div>{% endif %}
+
+    <div class="reveal reveal-delay-2">
+      {% if enabled_tabs | length > 1 %}
+      <div class="install-tabs">
+        {% for tab in enabled_tabs %}
+        <button class="install-tab{% if loop.first %} active{% endif %}" data-tab="{{ tab.id }}-{{ id_suffix }}">{{ tab.label }}</button>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% for tab in enabled_tabs %}
+      <div class="install-panel{% if loop.first %} active{% endif %}" id="{{ tab.id }}-{{ id_suffix }}">
+        {% for step in tab.steps %}
+        <div class="install-step">
+          <div class="step-number">{{ step.step or loop.index }}</div>
+          <div>
+            <div class="step-title">{{ step.title }}</div>
+            {% if step.desc %}<p class="step-desc">{{ step.desc }}</p>{% endif %}
+            {% if step.cmd %}
+            <div class="code-block">
+              <button class="copy-btn">Copy</button>
+              <pre><code>{{ step.cmd }}</code></pre>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endmacro %}
