@@ -50,6 +50,41 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+
+def _check_upload_mount():
+    """Warn loudly at startup if uploaded files won't persist across container
+    recreates. Since 0.2.2 the recommended volume mount is /app/static/uploads;
+    deploys still mounting the volume at /app/static/img have new uploads
+    written to the container's writable layer (non-persistent)."""
+    try:
+        uploads_mounted = os.path.ismount(UPLOAD_DIR)
+        img_mounted = os.path.ismount(CHROME_DIR)
+    except OSError:
+        return
+    if uploads_mounted:
+        return
+    if img_mounted:
+        bar = "=" * 70
+        print(
+            "\n" + bar
+            + "\n[viibeware config WARNING] Uploaded files will NOT persist!"
+            + "\n"
+            + "\nYour Docker volume is mounted at /app/static/img (legacy path)."
+            + "\nSince 0.2.2 the app writes uploads to /app/static/uploads, which"
+            + "\nis not a volume on your setup — new uploads will be destroyed on"
+            + "\nthe next `docker compose up -d`."
+            + "\n"
+            + "\nFix: in docker-compose.yml change the uploads volume line to:"
+            + "\n    - viibeware-uploads:/app/static/uploads"
+            + "\nthen run: docker compose down && docker compose up -d"
+            + "\n" + bar + "\n",
+            flush=True,
+        )
+
+
+_check_upload_mount()
+
+
 # Auto-create content.json from example on first run
 if not os.path.exists(CONTENT_FILE) and os.path.exists(CONTENT_EXAMPLE):
     import shutil
@@ -126,7 +161,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.5.0"
+SITE_VERSION = "0.5.2"
 
 
 @app.context_processor

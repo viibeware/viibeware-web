@@ -2,6 +2,19 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.5.2] — 2026-04-18
+
+### Added
+- **Startup warning for misconfigured compose** — prints a loud, clear message in the container logs if the Docker volume is mounted at the legacy `/app/static/img` path instead of `/app/static/uploads`. Left unfixed this mismatch causes uploaded files to land in the container's writable layer instead of the persistent volume, so they vanish on every `docker compose up -d`. The warning names the fix and the exact compose line to change.
+
+---
+
+## [0.5.1] — 2026-04-18
+
+(No code changes — version-only release.)
+
+---
+
 ## [0.5.0] — 2026-04-18
 
 ### Added
