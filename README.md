@@ -19,7 +19,7 @@ docker compose up -d
 
 The site will be available at **http://localhost:8899**
 
-Admin panel: **http://localhost:8899/admin** (default: `admin` / `viibeware2026`)
+Admin panel: **http://localhost:8899/admin** (default: `admin` / `admin`). The first login with the default password forces you to choose a new one (≥12 chars, with upper/lower/digit).
 
 ## Migrating from Bare-Metal
 
@@ -68,7 +68,7 @@ viibeware/
 |---|---|---|
 | `SECRET_KEY` | `change-me-in-production` | Flask session secret — generate with `python3 -c "import secrets; print(secrets.token_hex(32))"` |
 | `ADMIN_USER` | `admin` | Admin login username |
-| `ADMIN_PASS` | `viibeware2026` | Admin login password |
+| `ADMIN_PASS` | `admin` | Admin login password — first login with this value forces a password change stored as a hash in `data/auth.json` |
 | `GUNICORN_WORKERS` | `2` | Number of gunicorn worker processes |
 | `GUNICORN_PORT` | `8899` | Port the app listens on |
 

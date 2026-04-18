@@ -13,6 +13,7 @@ data/content.json
 data/content.pre-*.json
 data/content.live-*.json
 data/.version-refresh-lock
+data/auth.json
 static/uploads/*
 !static/uploads/.gitkeep
 

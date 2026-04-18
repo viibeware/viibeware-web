@@ -11,6 +11,7 @@ import zipfile
 from datetime import datetime, timedelta
 from functools import wraps
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask import (
     Flask, render_template, request, redirect, url_for,
     flash, session, jsonify, send_from_directory, send_file
@@ -125,7 +126,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.3.1"
+SITE_VERSION = "0.3.2"
 
 
 @app.context_processor
@@ -133,9 +134,69 @@ def inject_globals():
     """Make cache version and site version available in all templates."""
     return {"cache_v": CACHE_VERSION, "site_version": SITE_VERSION}
 
-# --- Admin credentials (change in production) ---
+# --- Admin credentials ---
+# DEFAULT_ADMIN_PASS is the "fresh install" password; first login with this
+# value triggers a mandatory password change. Once the user sets a custom
+# password via the admin UI, the hash is stored in data/auth.json and takes
+# precedence over this default (and the ADMIN_PASS env var).
+DEFAULT_ADMIN_PASS = "admin"
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
-ADMIN_PASS = os.environ.get("ADMIN_PASS", "viibeware2026")
+ADMIN_PASS = os.environ.get("ADMIN_PASS", DEFAULT_ADMIN_PASS)
+AUTH_FILE = os.path.join(os.path.dirname(__file__), "data", "auth.json")
+
+
+def load_auth():
+    """Read the admin auth config. Missing/invalid → empty dict."""
+    if not os.path.exists(AUTH_FILE):
+        return {}
+    try:
+        with open(AUTH_FILE, "r") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def save_auth(data):
+    with open(AUTH_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def verify_password(submitted):
+    """Return True if the submitted password matches the stored hash (if set)
+    or the env/default password (if no hash stored)."""
+    auth = load_auth()
+    stored_hash = auth.get("password_hash")
+    if stored_hash:
+        try:
+            return check_password_hash(stored_hash, submitted)
+        except Exception:
+            return False
+    return submitted == ADMIN_PASS
+
+
+def is_using_default_password():
+    """True if no custom password has been set and the active password
+    (env or default) is still the insecure DEFAULT_ADMIN_PASS."""
+    auth = load_auth()
+    if auth.get("password_hash"):
+        return False
+    return ADMIN_PASS == DEFAULT_ADMIN_PASS
+
+
+def validate_password_strength(pw):
+    """Return a human-readable error message if the password is too weak,
+    else None. Rules: ≥12 chars, must include upper, lower, and digit."""
+    if len(pw) < 12:
+        return "Password must be at least 12 characters long."
+    if not any(c.isupper() for c in pw):
+        return "Password must include an uppercase letter."
+    if not any(c.islower() for c in pw):
+        return "Password must include a lowercase letter."
+    if not any(c.isdigit() for c in pw):
+        return "Password must include a digit."
+    if pw == DEFAULT_ADMIN_PASS:
+        return "Please choose a password different from the default."
+    return None
 
 
 _DEFAULT_INSTALL_TABS = [
@@ -569,13 +630,73 @@ def admin_login():
     if request.method == "POST":
         username = request.form.get("username", "")
         password = request.form.get("password", "")
-        if username == ADMIN_USER and password == ADMIN_PASS:
+        if username == ADMIN_USER and verify_password(password):
             session.permanent = True
             session["admin_logged_in"] = True
+            if is_using_default_password():
+                session["must_change_password"] = True
+                flash("You're signed in with the default password. Please set a new one to continue.", "success")
+                return redirect(url_for("admin_change_password"))
+            session.pop("must_change_password", None)
             flash("Logged in successfully.", "success")
             return redirect(url_for("admin_dashboard"))
         flash("Invalid credentials.", "error")
     return render_template("admin_login.html")
+
+
+@app.before_request
+def _enforce_password_change():
+    """If the user is logged in with the default password, force them through
+    /admin/change-password before they can reach any other admin page."""
+    if not session.get("admin_logged_in"):
+        return
+    if not session.get("must_change_password"):
+        return
+    # Allow the change-password page itself, logout, and static files
+    if request.endpoint in {"admin_change_password", "admin_logout", "static"}:
+        return
+    # Only intercept admin routes; leave public pages alone
+    if request.path.startswith("/admin"):
+        if request.method == "POST" and (
+            request.is_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("Accept", "")
+        ):
+            return jsonify({"status": "error", "message": "Password change required"}), 403
+        return redirect(url_for("admin_change_password"))
+
+
+@app.route("/admin/change-password", methods=["GET", "POST"])
+@login_required
+def admin_change_password():
+    must_change = bool(session.get("must_change_password"))
+    if request.method == "POST":
+        current = request.form.get("current_password", "")
+        new = request.form.get("new_password", "")
+        confirm = request.form.get("confirm_password", "")
+
+        if not verify_password(current):
+            flash("Current password is incorrect.", "error")
+            return render_template("admin/change_password.html", must_change=must_change)
+
+        if new != confirm:
+            flash("The two new passwords do not match.", "error")
+            return render_template("admin/change_password.html", must_change=must_change)
+
+        err = validate_password_strength(new)
+        if err:
+            flash(err, "error")
+            return render_template("admin/change_password.html", must_change=must_change)
+
+        save_auth({
+            "password_hash": generate_password_hash(new),
+            "password_changed_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        })
+        session.pop("must_change_password", None)
+        flash("Password updated.", "success")
+        return redirect(url_for("admin_dashboard"))
+
+    return render_template("admin/change_password.html", must_change=must_change)
 
 
 @app.route("/admin/logout")

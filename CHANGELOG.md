@@ -2,6 +2,19 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.3.2] — 2026-04-18
+
+### Changed
+- **Default admin password changed from `viibeware2026` to `admin`.** Fresh installs must set a new password on first login before the rest of the admin unlocks. Existing deploys with `ADMIN_PASS` already set in `.env` are unaffected — only installs actually using the default password are prompted.
+
+### Added
+- **Forced password change on first login** — when a user logs in with the default password, the session is flagged and every admin page redirects to `/admin/change-password` until a new password is set.
+- **Voluntary password change** — "Change password" link in the sidebar footer. Requires current password.
+- **Strong-password rule** — minimum 12 characters, must include uppercase, lowercase, and a digit. Rejects the default value itself.
+- Hashed-password storage in `data/auth.json` (scrypt, via `werkzeug.security`). Once a hash is stored it takes precedence over the `ADMIN_PASS` env var.
+
+---
+
 ## [0.3.1] — 2026-04-18
 
 ### Added
