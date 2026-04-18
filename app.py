@@ -161,7 +161,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.5.3"
+SITE_VERSION = "0.5.4"
 
 
 @app.context_processor

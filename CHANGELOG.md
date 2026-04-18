@@ -2,6 +2,13 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.5.4] — 2026-04-18
+
+### Removed
+- "Admin" link in the public footer. The admin panel is still at `/admin`; type the URL manually to reach it.
+
+---
+
 ## [0.5.3] — 2026-04-18
 
 ### Fixed
