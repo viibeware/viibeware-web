@@ -6,6 +6,9 @@
   <title>Sign In — viibeware Admin</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ cache_v }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/logo.svg') }}">
+  {% if turnstile and turnstile.enabled and turnstile.site_key %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  {% endif %}
 </head>
 <body>
   <div class="login-wrap">
@@ -30,6 +33,11 @@
           <label for="password">Password</label>
           <input type="password" id="password" name="password" autocomplete="current-password" required>
         </div>
+        {% if turnstile and turnstile.enabled and turnstile.site_key %}
+        <div class="field" style="display: flex; justify-content: center; margin-bottom: 1rem;">
+          <div class="cf-turnstile" data-sitekey="{{ turnstile.site_key }}" data-theme="dark"></div>
+        </div>
+        {% endif %}
         <button type="submit" class="btn btn-primary">Sign In</button>
       </form>
     </div>

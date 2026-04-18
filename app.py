@@ -126,7 +126,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.3.2"
+SITE_VERSION = "0.4.0"
 
 
 @app.context_processor
@@ -144,16 +144,57 @@ ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASS = os.environ.get("ADMIN_PASS", DEFAULT_ADMIN_PASS)
 AUTH_FILE = os.path.join(os.path.dirname(__file__), "data", "auth.json")
 
+ROLES = ("admin", "editor")
+
+
+def _empty_auth():
+    return {
+        "users": [],
+        "settings": {
+            "turnstile": {"enabled": False, "site_key": "", "secret_key": ""},
+        },
+    }
+
 
 def load_auth():
-    """Read the admin auth config. Missing/invalid → empty dict."""
+    """Read the admin auth config, migrating legacy shapes to the current
+    schema. Returns a dict with `users` (list) and `settings` (dict) keys."""
     if not os.path.exists(AUTH_FILE):
-        return {}
+        return _empty_auth()
     try:
         with open(AUTH_FILE, "r") as f:
-            return json.load(f)
+            data = json.load(f)
     except (OSError, json.JSONDecodeError):
-        return {}
+        return _empty_auth()
+
+    # Legacy single-user shape: {password_hash, password_changed_at}
+    if "users" not in data and "password_hash" in data:
+        data = {
+            "users": [{
+                "id": "user-admin",
+                "username": ADMIN_USER,
+                "password_hash": data.get("password_hash", ""),
+                "role": "admin",
+                "created_at": data.get("password_changed_at", datetime.utcnow().isoformat(timespec="seconds") + "Z"),
+                "password_changed_at": data.get("password_changed_at", ""),
+            }],
+            "settings": {
+                "turnstile": {"enabled": False, "site_key": "", "secret_key": ""},
+            },
+        }
+        try:
+            save_auth(data)
+            print("[migrate] auth.json reshaped: legacy → users[]+settings", flush=True)
+        except OSError:
+            pass
+
+    data.setdefault("users", [])
+    data.setdefault("settings", {})
+    data["settings"].setdefault(
+        "turnstile",
+        {"enabled": False, "site_key": "", "secret_key": ""},
+    )
+    return data
 
 
 def save_auth(data):
@@ -161,26 +202,74 @@ def save_auth(data):
         json.dump(data, f, indent=2)
 
 
-def verify_password(submitted):
-    """Return True if the submitted password matches the stored hash (if set)
-    or the env/default password (if no hash stored)."""
+def _new_user_id(existing_ids):
+    n = 1
+    while f"user-{n}" in existing_ids:
+        n += 1
+    return f"user-{n}"
+
+
+def get_user_by_username(username):
+    for u in load_auth().get("users", []):
+        if u.get("username") == username:
+            return u
+    return None
+
+
+def get_user_by_id(user_id):
+    for u in load_auth().get("users", []):
+        if u.get("id") == user_id:
+            return u
+    return None
+
+
+def verify_user_credentials(username, password):
+    """Return the matching user dict (for a stored user) or a synthetic
+    bootstrap user dict if no users exist yet and credentials match the
+    env/default. Returns None on failure."""
+    if not username or not password:
+        return None
     auth = load_auth()
-    stored_hash = auth.get("password_hash")
-    if stored_hash:
+    users = auth.get("users", [])
+    for u in users:
+        if u.get("username") != username:
+            continue
+        h = u.get("password_hash", "")
         try:
-            return check_password_hash(stored_hash, submitted)
+            if h and check_password_hash(h, password):
+                return u
         except Exception:
-            return False
-    return submitted == ADMIN_PASS
+            pass
+        return None  # username matched but password didn't
+    # Bootstrap path: no users yet, fall through to env credentials
+    if not users and username == ADMIN_USER and password == ADMIN_PASS:
+        return {
+            "id": "bootstrap",
+            "username": ADMIN_USER,
+            "role": "admin",
+            "password_hash": "",
+            "bootstrap": True,
+        }
+    return None
+
+
+def current_user():
+    """Return the logged-in user dict for the current session, or None."""
+    uid = session.get("user_id")
+    if uid:
+        u = get_user_by_id(uid)
+        if u:
+            return u
+    # Pre-bootstrap session (first login before a user record exists)
+    if session.get("bootstrap_admin"):
+        return {"id": "bootstrap", "username": ADMIN_USER, "role": "admin", "bootstrap": True}
+    return None
 
 
 def is_using_default_password():
-    """True if no custom password has been set and the active password
-    (env or default) is still the insecure DEFAULT_ADMIN_PASS."""
-    auth = load_auth()
-    if auth.get("password_hash"):
-        return False
-    return ADMIN_PASS == DEFAULT_ADMIN_PASS
+    """True if the currently logged-in session is a bootstrap session (no
+    user record yet, signed in via default env credentials)."""
+    return bool(session.get("bootstrap_admin"))
 
 
 def validate_password_strength(pw):
@@ -197,6 +286,44 @@ def validate_password_strength(pw):
     if pw == DEFAULT_ADMIN_PASS:
         return "Please choose a password different from the default."
     return None
+
+
+# ─── Turnstile ─────────────────────────────────────────────────
+
+def turnstile_settings():
+    return load_auth().get("settings", {}).get("turnstile", {}) or {}
+
+
+def turnstile_enabled():
+    s = turnstile_settings()
+    return bool(s.get("enabled") and s.get("site_key") and s.get("secret_key"))
+
+
+def verify_turnstile(token, remote_ip=""):
+    """Server-side verification with Cloudflare. Returns True on success."""
+    s = turnstile_settings()
+    secret = (s.get("secret_key") or "").strip()
+    if not secret:
+        return False
+    if not token:
+        return False
+    try:
+        import urllib.parse
+        payload = {"secret": secret, "response": token}
+        if remote_ip:
+            payload["remoteip"] = remote_ip
+        data = urllib.parse.urlencode(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            body = json.loads(r.read().decode("utf-8"))
+        return bool(body.get("success"))
+    except Exception as e:
+        print(f"[turnstile] verify failed: {e}", flush=True)
+        return False
 
 
 _DEFAULT_INSTALL_TABS = [
@@ -593,24 +720,46 @@ def _start_version_refresh_thread():
 _start_version_refresh_thread()
 
 
+def _wants_json():
+    return (
+        request.is_json
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("Accept", "")
+    )
+
+
 def login_required(f):
     """Decorator to require admin login."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("admin_logged_in"):
-            # For XHR/fetch callers, return JSON 401 so the client can show a
-            # clear error instead of silently following a 302 into an HTML
-            # login page (which then breaks res.json()).
-            wants_json = (
-                request.is_json
-                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
-                or "application/json" in request.headers.get("Accept", "")
-            )
-            if wants_json:
+            if _wants_json():
                 return jsonify({"status": "error", "message": "Not logged in"}), 401
             return redirect(url_for("admin_login"))
         return f(*args, **kwargs)
     return decorated
+
+
+def role_required(*allowed_roles):
+    """Decorator to require the logged-in user to have one of the given roles.
+    login_required must be applied separately (or use @role_required alone —
+    it also checks login). Returns 403 for authenticated users lacking the role."""
+    def wrapper(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if not session.get("admin_logged_in"):
+                if _wants_json():
+                    return jsonify({"status": "error", "message": "Not logged in"}), 401
+                return redirect(url_for("admin_login"))
+            u = current_user()
+            if not u or u.get("role") not in allowed_roles:
+                if _wants_json():
+                    return jsonify({"status": "error", "message": "Forbidden"}), 403
+                flash("You don't have permission to access that page.", "error")
+                return redirect(url_for("admin_dashboard"))
+            return f(*args, **kwargs)
+        return decorated
+    return wrapper
 
 
 # ─── Public Routes ─────────────────────────────────────────────
@@ -627,21 +776,33 @@ def index():
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     """Admin login page."""
+    ts = turnstile_settings()
     if request.method == "POST":
         username = request.form.get("username", "")
         password = request.form.get("password", "")
-        if username == ADMIN_USER and verify_password(password):
-            session.permanent = True
-            session["admin_logged_in"] = True
-            if is_using_default_password():
-                session["must_change_password"] = True
-                flash("You're signed in with the default password. Please set a new one to continue.", "success")
-                return redirect(url_for("admin_change_password"))
-            session.pop("must_change_password", None)
-            flash("Logged in successfully.", "success")
-            return redirect(url_for("admin_dashboard"))
-        flash("Invalid credentials.", "error")
-    return render_template("admin_login.html")
+        if turnstile_enabled():
+            token = request.form.get("cf-turnstile-response", "")
+            if not verify_turnstile(token, request.remote_addr or ""):
+                flash("Turnstile check failed. Please try again.", "error")
+                return render_template("admin_login.html", turnstile=ts)
+        user = verify_user_credentials(username, password)
+        if not user:
+            flash("Invalid credentials.", "error")
+            return render_template("admin_login.html", turnstile=ts)
+        session.permanent = True
+        session["admin_logged_in"] = True
+        if user.get("bootstrap"):
+            session["bootstrap_admin"] = True
+            session["must_change_password"] = True
+            session.pop("user_id", None)
+            flash("You're signed in with the default password. Please set a new one to continue.", "success")
+            return redirect(url_for("admin_change_password"))
+        session["user_id"] = user["id"]
+        session.pop("bootstrap_admin", None)
+        session.pop("must_change_password", None)
+        flash("Logged in successfully.", "success")
+        return redirect(url_for("admin_dashboard"))
+    return render_template("admin_login.html", turnstile=ts)
 
 
 @app.before_request
@@ -670,12 +831,19 @@ def _enforce_password_change():
 @login_required
 def admin_change_password():
     must_change = bool(session.get("must_change_password"))
+    bootstrap = bool(session.get("bootstrap_admin"))
     if request.method == "POST":
         current = request.form.get("current_password", "")
         new = request.form.get("new_password", "")
         confirm = request.form.get("confirm_password", "")
 
-        if not verify_password(current):
+        # Verify "current password" — for bootstrap it's the env/default value
+        if bootstrap:
+            current_ok = (current == ADMIN_PASS)
+        else:
+            u = current_user()
+            current_ok = bool(u and u.get("password_hash") and check_password_hash(u["password_hash"], current))
+        if not current_ok:
             flash("Current password is incorrect.", "error")
             return render_template("admin/change_password.html", must_change=must_change)
 
@@ -688,10 +856,31 @@ def admin_change_password():
             flash(err, "error")
             return render_template("admin/change_password.html", must_change=must_change)
 
-        save_auth({
-            "password_hash": generate_password_hash(new),
-            "password_changed_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-        })
+        auth = load_auth()
+        now_iso = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        if bootstrap:
+            # Create the first admin user
+            uid = _new_user_id({u["id"] for u in auth.get("users", [])})
+            new_user = {
+                "id": uid,
+                "username": ADMIN_USER,
+                "password_hash": generate_password_hash(new),
+                "role": "admin",
+                "created_at": now_iso,
+                "password_changed_at": now_iso,
+            }
+            auth.setdefault("users", []).append(new_user)
+            save_auth(auth)
+            session.pop("bootstrap_admin", None)
+            session["user_id"] = uid
+        else:
+            u = current_user()
+            for stored in auth.get("users", []):
+                if stored["id"] == u["id"]:
+                    stored["password_hash"] = generate_password_hash(new)
+                    stored["password_changed_at"] = now_iso
+                    break
+            save_auth(auth)
         session.pop("must_change_password", None)
         flash("Password updated.", "success")
         return redirect(url_for("admin_dashboard"))
@@ -702,9 +891,161 @@ def admin_change_password():
 @app.route("/admin/logout")
 def admin_logout():
     """Log out of admin."""
-    session.pop("admin_logged_in", None)
+    for key in ("admin_logged_in", "user_id", "bootstrap_admin", "must_change_password"):
+        session.pop(key, None)
     flash("Logged out.", "success")
     return redirect(url_for("index"))
+
+
+# ─── Settings + Users (admin-only) ─────────────────────────────
+
+def _user_dto(u):
+    """Return the safe public fields of a user (no hash)."""
+    return {
+        "id": u.get("id"),
+        "username": u.get("username"),
+        "role": u.get("role"),
+        "created_at": u.get("created_at", ""),
+        "password_changed_at": u.get("password_changed_at", ""),
+    }
+
+
+@app.route("/admin/settings", methods=["GET"])
+@role_required("admin")
+def admin_settings_get():
+    auth = load_auth()
+    ts = auth.get("settings", {}).get("turnstile", {}) or {}
+    return jsonify({
+        "status": "ok",
+        "turnstile": {
+            "enabled": bool(ts.get("enabled")),
+            "site_key": ts.get("site_key", ""),
+            "secret_key_set": bool(ts.get("secret_key")),
+        },
+        "users": [_user_dto(u) for u in auth.get("users", [])],
+        "current_user_id": (current_user() or {}).get("id"),
+        "roles": list(ROLES),
+    })
+
+
+@app.route("/admin/settings/turnstile", methods=["POST"])
+@role_required("admin")
+def admin_settings_turnstile():
+    data = request.get_json(silent=True) or {}
+    auth = load_auth()
+    ts = auth.get("settings", {}).setdefault("turnstile", {"enabled": False, "site_key": "", "secret_key": ""})
+    if "enabled" in data:
+        ts["enabled"] = bool(data["enabled"])
+    if "site_key" in data:
+        ts["site_key"] = (data.get("site_key") or "").strip()
+    # Only overwrite secret if a non-empty value is supplied (so saving with a
+    # blank field doesn't clobber the stored secret when it's hidden in the UI)
+    sk = data.get("secret_key")
+    if sk is not None and str(sk).strip() != "":
+        ts["secret_key"] = str(sk).strip()
+    if data.get("clear_secret_key"):
+        ts["secret_key"] = ""
+    save_auth(auth)
+    return jsonify({"status": "ok", "message": "Turnstile settings saved"})
+
+
+@app.route("/admin/users", methods=["POST"])
+@role_required("admin")
+def admin_user_new():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    role = data.get("role") or "editor"
+    if not username:
+        return jsonify({"status": "error", "message": "Username is required"}), 400
+    if role not in ROLES:
+        return jsonify({"status": "error", "message": f"Invalid role (allowed: {', '.join(ROLES)})"}), 400
+    if get_user_by_username(username):
+        return jsonify({"status": "error", "message": "Username already in use"}), 400
+    err = validate_password_strength(password)
+    if err:
+        return jsonify({"status": "error", "message": err}), 400
+    auth = load_auth()
+    uid = _new_user_id({u["id"] for u in auth["users"]})
+    now_iso = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    user = {
+        "id": uid,
+        "username": username,
+        "password_hash": generate_password_hash(password),
+        "role": role,
+        "created_at": now_iso,
+        "password_changed_at": now_iso,
+    }
+    auth["users"].append(user)
+    save_auth(auth)
+    return jsonify({"status": "ok", "message": f"User '{username}' created", "user": _user_dto(user)})
+
+
+@app.route("/admin/users/<user_id>", methods=["POST"])
+@role_required("admin")
+def admin_user_update(user_id):
+    data = request.get_json(silent=True) or {}
+    auth = load_auth()
+    target = None
+    for u in auth["users"]:
+        if u["id"] == user_id:
+            target = u
+            break
+    if not target:
+        return jsonify({"status": "error", "message": "User not found"}), 404
+
+    me = current_user() or {}
+
+    if "role" in data:
+        new_role = data["role"]
+        if new_role not in ROLES:
+            return jsonify({"status": "error", "message": "Invalid role"}), 400
+        # Don't allow demoting yourself or removing the last admin
+        admins = [u for u in auth["users"] if u.get("role") == "admin"]
+        if target.get("role") == "admin" and new_role != "admin" and len(admins) <= 1:
+            return jsonify({"status": "error", "message": "Cannot demote the last remaining admin"}), 400
+        target["role"] = new_role
+
+    if "password" in data and data["password"]:
+        err = validate_password_strength(data["password"])
+        if err:
+            return jsonify({"status": "error", "message": err}), 400
+        target["password_hash"] = generate_password_hash(data["password"])
+        target["password_changed_at"] = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+    if "username" in data:
+        new_username = (data["username"] or "").strip()
+        if not new_username:
+            return jsonify({"status": "error", "message": "Username cannot be empty"}), 400
+        other = get_user_by_username(new_username)
+        if other and other["id"] != target["id"]:
+            return jsonify({"status": "error", "message": "Username already in use"}), 400
+        target["username"] = new_username
+
+    save_auth(auth)
+    return jsonify({"status": "ok", "message": "User updated", "user": _user_dto(target)})
+
+
+@app.route("/admin/users/<user_id>/delete", methods=["POST"])
+@role_required("admin")
+def admin_user_delete(user_id):
+    auth = load_auth()
+    me = current_user() or {}
+    if me.get("id") == user_id:
+        return jsonify({"status": "error", "message": "You can't delete your own account"}), 400
+    target = None
+    for u in auth["users"]:
+        if u["id"] == user_id:
+            target = u
+            break
+    if not target:
+        return jsonify({"status": "error", "message": "User not found"}), 404
+    admins = [u for u in auth["users"] if u.get("role") == "admin"]
+    if target.get("role") == "admin" and len(admins) <= 1:
+        return jsonify({"status": "error", "message": "Cannot delete the last remaining admin"}), 400
+    auth["users"] = [u for u in auth["users"] if u["id"] != user_id]
+    save_auth(auth)
+    return jsonify({"status": "ok", "message": f"Deleted user '{target.get('username','')}'"})
 
 
 def _render_admin(template, active_section, **ctx):
@@ -715,6 +1056,7 @@ def _render_admin(template, active_section, **ctx):
         content=content,
         active_section=active_section,
         sidebar_products=content.get("products", []),
+        current_user=current_user(),
         **ctx,
     )
 
@@ -995,7 +1337,7 @@ def admin_backup():
 
 
 @app.route("/admin/raw", methods=["GET", "POST"])
-@login_required
+@role_required("admin")
 def admin_raw():
     """Raw JSON editor for the entire content file."""
     if request.method == "POST":

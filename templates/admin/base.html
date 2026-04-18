@@ -32,6 +32,10 @@
     {% endwith %}
   </div>
 
+  {% if current_user and current_user.role == 'admin' %}
+  {% include 'admin/_settings_modal.html' %}
+  {% endif %}
+
   <script src="{{ url_for('static', filename='js/admin.js') }}?v={{ cache_v }}"></script>
   {% block scripts %}{% endblock %}
 </body>

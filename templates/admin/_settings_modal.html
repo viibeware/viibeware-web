@@ -1,0 +1,93 @@
+{# Settings modal — rendered into every admin page for logged-in admins. #}
+<div class="modal-backdrop" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" hidden>
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h2 id="settings-modal-title">Settings</h2>
+      <button type="button" class="btn btn-icon btn-ghost" onclick="closeSettings()" aria-label="Close">×</button>
+    </div>
+
+    <div class="tabs" style="margin: 0 1.5rem;">
+      <button data-tab="settings-security" class="active">Security</button>
+      <button data-tab="settings-users">Users</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- ── Security / Turnstile ───────────────────────── -->
+      <div class="tab-panel active" id="settings-security">
+        <div class="subheader" style="margin-top: 0;">Cloudflare Turnstile</div>
+        <p class="hint" style="margin-bottom: 1rem;">
+          Free, privacy-friendly bot protection for the login form.
+          Get keys at <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank" rel="noopener">dash.cloudflare.com/…/turnstile</a>.
+        </p>
+
+        <label class="inline" style="margin-bottom: 1rem;">
+          <span class="toggle">
+            <input type="checkbox" id="ts-enabled">
+            <span class="track"></span>
+          </span>
+          <span>Enable on login page</span>
+        </label>
+
+        <div class="field">
+          <label>Site key</label>
+          <input type="text" id="ts-site-key" placeholder="0x4AAA..." class="mono">
+          <div class="hint">Public — rendered in the login page HTML.</div>
+        </div>
+
+        <div class="field">
+          <label>Secret key</label>
+          <input type="password" id="ts-secret-key" placeholder="0x4AAAA...">
+          <div class="hint" id="ts-secret-hint">Private — used only server-side for siteverify.</div>
+        </div>
+
+        <div class="row">
+          <button type="button" class="btn btn-primary" onclick="saveTurnstile()">Save</button>
+          <button type="button" class="btn" onclick="clearTurnstileSecret()">Clear stored secret</button>
+        </div>
+      </div>
+
+      <!-- ── Users ──────────────────────────────────────── -->
+      <div class="tab-panel" id="settings-users">
+        <div class="row between" style="margin-bottom: 1rem;">
+          <div class="subheader" style="margin: 0;">Users</div>
+          <button type="button" class="btn btn-sm btn-primary" onclick="showAddUserForm()">+ Add user</button>
+        </div>
+
+        <div id="add-user-form" class="card hidden" style="background: var(--bg-input); margin-bottom: 1rem;">
+          <div class="subheader" style="margin-top: 0;">Add user</div>
+          <div class="form-row two-col">
+            <div>
+              <label>Username</label>
+              <input type="text" id="new-user-username">
+            </div>
+            <div>
+              <label>Role</label>
+              <select id="new-user-role">
+                <option value="editor" selected>Editor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="new-user-password" autocomplete="new-password" placeholder="≥12 chars, upper/lower/digit">
+          </div>
+          <div class="row">
+            <button type="button" class="btn btn-primary" onclick="createUser()">Create</button>
+            <button type="button" class="btn" onclick="hideAddUserForm()">Cancel</button>
+          </div>
+        </div>
+
+        <table class="table" id="users-table">
+          <thead>
+            <tr><th>Username</th><th>Role</th><th>Password changed</th><th></th></tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="4" class="text-muted" style="text-align:center; padding: 1.5rem;">Loading…</td></tr>
+          </tbody>
+        </table>
+        <div class="hint" style="margin-top: 0.75rem;">Admins can manage users and settings. Editors can edit site content but not users, settings, or the raw JSON.</div>
+      </div>
+    </div>
+  </div>
+</div>

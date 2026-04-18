@@ -2,6 +2,24 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.4.0] — 2026-04-18
+
+### Added
+- **Cloudflare Turnstile on login** — configurable via a new settings modal. Server-side siteverify rejects bad tokens before the password is even checked. Widget only renders when enabled + keyed.
+- **Settings modal** — gear icon in the sidebar footer opens a blurred-backdrop popup with tabbed sections for Security (Turnstile) and Users. Close with `×`, Esc, or backdrop click.
+- **Multi-user with role-based permissions** — replaces the single-user auth with `users: [{id, username, password_hash, role, ...}]` in `data/auth.json`.
+  - Roles: `admin` (full access — users, settings, raw JSON) and `editor` (site content only).
+  - Create, update role, reset password, delete users (all via the Users tab).
+  - Guards: can't delete your own account, can't demote/delete the last admin.
+  - `role_required()` decorator applied to `/admin/settings*`, `/admin/users*`, `/admin/raw`.
+
+### Changed
+- `data/auth.json` schema expanded from `{password_hash, password_changed_at}` to `{users: [...], settings: {turnstile: {...}}}`. Automatic migration of the legacy single-user shape on startup.
+- First-login bootstrap flow: when no users exist and credentials match the env/default, the change-password step creates the first admin user (rather than storing a loose hash).
+- Admin UI: gear icon + settings modal visible only to admins; sidebar footer reorganized.
+
+---
+
 ## [0.3.2] — 2026-04-18
 
 ### Changed
