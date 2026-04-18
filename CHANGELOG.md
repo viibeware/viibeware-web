@@ -2,6 +2,13 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.4.1] — 2026-04-18
+
+### Fixed
+- Sessions started before the 0.4.0 schema change had `admin_logged_in` set but no `user_id`, which caused `current_user()` to return None and hid the settings gear icon and modal. `current_user()` now auto-heals legacy sessions by resolving them to the admin user matching `ADMIN_USER`, so existing logged-in sessions pick up the 0.4.0 admin UI without needing to log out.
+
+---
+
 ## [0.4.0] — 2026-04-18
 
 ### Added

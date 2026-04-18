@@ -126,7 +126,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.4.0"
+SITE_VERSION = "0.4.1"
 
 
 @app.context_processor
@@ -263,6 +263,15 @@ def current_user():
     # Pre-bootstrap session (first login before a user record exists)
     if session.get("bootstrap_admin"):
         return {"id": "bootstrap", "username": ADMIN_USER, "role": "admin", "bootstrap": True}
+    # Legacy session recovery — sessions started before the 0.4.0 schema
+    # change have `admin_logged_in` set but no `user_id`. If an admin user
+    # matching ADMIN_USER exists, promote them onto this session so the
+    # user doesn't need to log out + back in to see admin UI.
+    if session.get("admin_logged_in"):
+        u = get_user_by_username(ADMIN_USER)
+        if u:
+            session["user_id"] = u["id"]
+            return u
     return None
 
 
