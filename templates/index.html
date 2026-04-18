@@ -32,7 +32,7 @@
   <!-- ═══ Navigation ═══ -->
   <nav class="nav">
     <div class="nav-inner">
-      <a href="#hero" class="nav-logo">
+      <a href="#" class="nav-logo" aria-label="Back to top">
         <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="{{ content.branding.name }} logo"
              style="width: {{ content.branding.logo_size_px }}px; height: {{ content.branding.logo_size_px }}px;">
         <span style="font-size: {{ content.branding.font_size_rem }}rem; color: {{ content.branding.color_primary }}; text-transform: {{ content.branding.transform }};">{{ render_brand(content.branding) }}</span>

@@ -2,6 +2,13 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.5.3] — 2026-04-18
+
+### Fixed
+- Nav brand link now smooth-scrolls to the top of the page instead of targeting `#hero`. Previously, if the Hero section was disabled in Layout, clicking the brand did nothing. `href="#"` is treated as "scroll to top" by the shared anchor handler.
+
+---
+
 ## [0.5.2] — 2026-04-18
 
 ### Added
