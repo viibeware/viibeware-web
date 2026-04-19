@@ -196,7 +196,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.6.1"
+SITE_VERSION = "0.6.2"
 
 
 @app.context_processor
@@ -1836,6 +1836,47 @@ def admin_refresh_versions():
         "message": f"Checked {len(results)} product(s); {updated} updated; {errored} error(s).",
         "results": results,
     })
+
+
+@app.route("/admin/products/<product_id>/duplicate", methods=["POST"])
+@login_required
+def admin_product_duplicate(product_id):
+    """Deep-copy a product under a new id, append matching product + install
+    sections, and return the new id so the UI can jump to its edit page."""
+    import copy as _copy
+    content = load_content()
+    src = get_product(content, product_id)
+    if not src:
+        return jsonify({"status": "error", "message": "Product not found"}), 404
+
+    new_product = _copy.deepcopy(src)
+    base_name = (src.get("name") or "Product").strip()
+    new_name = f"{base_name} (copy)"
+    base_id = _slugify(new_name) or f"{product_id}-copy"
+    new_id = _unique_product_id(content, base_id)
+    new_product["id"] = new_id
+    new_product["name"] = new_name
+    new_product["version_fetched_at"] = ""
+
+    content.setdefault("products", []).append(new_product)
+    content.setdefault("sections", []).append({
+        "id": f"product-{new_id}",
+        "type": "product",
+        "product_id": new_id,
+        "enabled": True,
+        "label": f"// {new_name}",
+        "subtitle": "",
+    })
+    content["sections"].append({
+        "id": f"install-{new_id}",
+        "type": "install",
+        "product_id": new_id,
+        "enabled": True,
+        "label": "// Install",
+        "subtitle": f"Install {new_name}",
+    })
+    save_content(content)
+    return jsonify({"status": "ok", "message": "Product duplicated", "id": new_id})
 
 
 @app.route("/admin/products/<product_id>/delete", methods=["POST"])

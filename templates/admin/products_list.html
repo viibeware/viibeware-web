@@ -28,6 +28,7 @@
         <td>{{ p.install_tabs|selectattr('enabled')|list|length }} / {{ p.install_tabs|length }}</td>
         <td class="actions">
           <a href="{{ url_for('admin_product_edit', product_id=p.id) }}" class="btn btn-sm">Edit</a>
+          <button class="btn btn-sm" onclick="duplicateProduct('{{ p.id }}', '{{ p.name|e }}')">Duplicate</button>
           <button class="btn btn-sm btn-danger" onclick="deleteProduct('{{ p.id }}', '{{ p.name|e }}')">Delete</button>
         </td>
       </tr>
@@ -87,6 +88,13 @@
     if (res.ok) {
       showToast('✓ Deleted');
       setTimeout(() => window.location.reload(), 500);
+    }
+  }
+  async function duplicateProduct(id, name) {
+    const res = await saveJSON(`/admin/products/${id}/duplicate`, {});
+    if (res.ok && res.data && res.data.id) {
+      showToast('✓ Duplicated — opening…');
+      setTimeout(() => window.location.href = `/admin/products/${res.data.id}`, 500);
     }
   }
 </script>

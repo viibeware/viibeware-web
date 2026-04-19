@@ -2,6 +2,14 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.6.2] — 2026-04-19
+
+### Added
+- **Duplicate product** — new "Duplicate" button on the products list (between Edit and Delete). Deep-copies the full product (features, tech stack, repo links, install tabs + steps, screenshots, images), appends " (copy)" to the name, generates a unique id with `-2` / `-3` suffixes if needed, and auto-creates matching `product-<id>` + `install-<id>` sections (both enabled). Redirects to the copy's edit page on success.
+- New endpoint `POST /admin/products/<id>/duplicate` returning the new product's id.
+
+---
+
 ## [0.6.1] — 2026-04-19
 
 ### Added
