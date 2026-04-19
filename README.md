@@ -21,6 +21,21 @@ The site will be available at **http://localhost:8899**
 
 Admin panel: **http://localhost:8899/admin** (default: `admin` / `admin`). The first login with the default password forces you to choose a new one (≥12 chars, with upper/lower/digit).
 
+### Showing the host OS in the dashboard widget
+
+The dashboard server widget tries to read `/host/etc/os-release` before falling back to the container's own release file. To make it show the real host OS (e.g. *Ubuntu 24.04.4 LTS*) instead of the container's base image (*Debian 13*), add a read-only bind mount under `volumes:` in your `docker-compose.yml`:
+
+```yaml
+services:
+  viibeware-web:
+    volumes:
+      - viibeware-data:/app/data
+      - viibeware-uploads:/app/static/uploads
+      - /etc/os-release:/host/etc/os-release:ro   # ← host OS readout
+```
+
+Safe to omit — if the file isn't mounted the widget just shows the container OS.
+
 ## Migrating from Bare-Metal
 
 If you have an existing systemd-based install at `/opt/viibeware`, the migration script handles everything:
