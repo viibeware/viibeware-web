@@ -2,6 +2,25 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.6.1] — 2026-04-19
+
+### Added
+- **Dashboard server widget** — new card at the top of `/admin` showing the current user's role + capabilities, plus live CPU, memory, load average, uptime, and OS. CPU and memory tiles have inline sparklines drawn on `<canvas>`. Admins additionally see an **Online** tile with the count of users active in the last 5 minutes (hover shows usernames + roles). Polls every 5 s; online tile refreshes every 30 s.
+- **Online-user tracking** — `before_request` hook updates a file-backed activity log (`data/.online_activity.json`) with per-user `last_seen` timestamps. Writes are coalesced (30 s per user) to avoid disk thrashing. New endpoints: `/admin/api/server-metrics` and `/admin/api/online-users` (admin-only).
+- **Per-user dashboard layout** — every user has their own `dash_layout` stored on their user record in `auth.json` (`[{key, enabled}, ...]`). Widgets can be dragged to reorder directly on the dashboard; a new **Customize widgets** modal (button in the page header) toggles widgets on/off. All changes auto-save; a new widget introduced in a later release auto-appends to existing layouts (default enabled).
+- **Reusable SVG icon set** — `templates/admin/_icons.html` with macros for `icon_grip`, `icon_close`, `icon_plus`, `icon_refresh`, `icon_trash`, `icon_external`, `icon_arrow_left`, `icon_expand`, `icon_check`. Inline SVGs, all `currentColor`-aware.
+
+### Changed
+- **Drag handles are now SVGs, not `⠿` glyphs.** Swapped across dashboard, layout, navigation, about, product-edit, and the customize-widgets modal. Close buttons on modals use `icon_close` too.
+- **Drag handle repositioned to the top-left** of every dashboard widget. Reserved left padding on card titles/heads so content can't slide under the handle (fixes collision with the OS readout on the server widget).
+- **Host OS detection** — widget prefers `/host/etc/os-release` over the container's own release file, so an admin who mounts the host's release file read-only gets the real host OS (e.g. *Ubuntu 24.04.4 LTS*) instead of the container's base image (e.g. *Debian 13*). `docker-compose.yml` now includes the mount: `/etc/os-release:/host/etc/os-release:ro` — remove the line if your host doesn't have `/etc/os-release`.
+- Removed the Version tile from the "At a glance" widget; the sidebar already shows the version under the brand.
+
+### Security (continuing 0.6.0 hardening)
+- None added this release; 0.6.0's CSRF + security headers + SVG sanitization + rate limiter + SECRET_KEY warning remain in effect.
+
+---
+
 ## [0.6.0] — 2026-04-19
 
 ### Security

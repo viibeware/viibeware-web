@@ -1,14 +1,89 @@
 {% extends "admin/base.html" %}
+{% from 'admin/_icons.html' import icon_grip, icon_close %}
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-{% block page_subtitle %}<div class="page-subtitle">Overview of your site content. Use the sidebar to edit any section.</div>{% endblock %}
+{% block page_subtitle %}<div class="page-subtitle">Overview of your site content. Drag any widget to reorder — changes save automatically.</div>{% endblock %}
 {% block page_actions %}
+<button type="button" class="btn" onclick="openCustomizeWidgets()">Customize widgets</button>
 <a href="{{ url_for('index') }}" target="_blank" rel="noopener" class="btn">View site ↗</a>
 {% endblock %}
 
 {% block content %}
-<div class="stack-md">
-  <div class="card">
+<div class="dash-widgets stack-md" id="dash-widgets">
+  {% for w in dash_layout %}
+  {% if w.enabled %}
+
+  {# ── Server & role widget ── #}
+  {% if w.key == 'server-metrics' %}
+  <section class="dash-widget card server-metrics{% if current_user and current_user.role != 'admin' %} server-metrics-role-only{% endif %}"
+           data-widget-key="server-metrics"
+           draggable="true"
+           id="server-metrics-widget"
+           data-endpoint="{{ url_for('admin_api_server_metrics') }}"
+           {% if current_user and current_user.role == 'admin' %}data-online-endpoint="{{ url_for('admin_api_online_users') }}"{% endif %}>
+    <span class="dash-drag-handle" title="Drag to reorder">{{ icon_grip(16) }}</span>
+    <div class="server-metrics-body">
+      <div class="role-panel">
+        <div class="role-panel-label">Your role</div>
+        <div class="role-panel-name">{{ (current_user.role or 'viewer')|capitalize }}</div>
+        <ul class="role-caps">
+          {% if current_user and current_user.role == 'admin' %}
+          <li>Manage users &amp; security settings</li>
+          <li>Create, edit &amp; delete all site content</li>
+          <li>Edit raw JSON and configure branding</li>
+          {% elif current_user and current_user.role == 'editor' %}
+          <li>Create &amp; edit products and site content</li>
+          <li>Upload images and manage backups</li>
+          <li>Cannot manage users, settings, or raw JSON</li>
+          {% else %}
+          <li>View admin dashboard</li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <div class="server-metrics-column">
+        <div class="card-head">
+          <div class="card-title" style="margin: 0;">Server</div>
+          <span class="text-muted mono" style="font-size: 0.78rem;" data-field="os">—</span>
+        </div>
+        <div class="server-metrics-grid{% if current_user and current_user.role == 'admin' %} server-metrics-grid-5{% endif %}">
+          <div class="metric-tile">
+            <div class="metric-label">CPU</div>
+            <div class="metric-value"><span data-field="cpu_percent">—</span><span class="metric-unit">%</span></div>
+            <canvas class="metric-spark" data-series="cpu" width="240" height="40"></canvas>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Memory</div>
+            <div class="metric-value"><span data-field="memory_percent">—</span><span class="metric-unit">%</span></div>
+            <div class="metric-sub text-muted" style="font-size: 0.75rem;" data-field="memory_detail">—</div>
+            <canvas class="metric-spark" data-series="mem" width="240" height="40"></canvas>
+          </div>
+          <div class="metric-tile metric-tile-text">
+            <div class="metric-label">Load Avg</div>
+            <div class="metric-value metric-value-sm" data-field="load_avg">—</div>
+            <div class="metric-sub text-muted" style="font-size: 0.75rem;">1m / 5m / 15m</div>
+          </div>
+          <div class="metric-tile metric-tile-text">
+            <div class="metric-label">Uptime</div>
+            <div class="metric-value metric-value-sm" data-field="uptime">—</div>
+            <div class="metric-sub text-muted" style="font-size: 0.75rem;" data-field="cpu_count">—</div>
+          </div>
+          {% if current_user and current_user.role == 'admin' %}
+          <div class="metric-tile metric-tile-text" id="online-users-tile">
+            <div class="metric-label">Online</div>
+            <div class="metric-value" data-field="online_count">—</div>
+            <div class="metric-sub text-muted" style="font-size: 0.75rem;" data-field="online_label">users · last 5 min</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ── At a glance ── #}
+  {% elif w.key == 'at-a-glance' %}
+  <section class="dash-widget card" data-widget-key="at-a-glance" draggable="true">
+    <span class="dash-drag-handle" title="Drag to reorder">{{ icon_grip(16) }}</span>
     <div class="card-title">At a glance</div>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem;">
       <div style="background:var(--bg-input); padding:1rem; border-radius:10px; border:1px solid var(--border);">
@@ -23,14 +98,13 @@
         <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em;">Nav links</div>
         <div style="font-family:var(--font-display); font-size:1.75rem; font-weight:700; color:var(--cyan);">{{ stats.nav_links }}</div>
       </div>
-      <div style="background:var(--bg-input); padding:1rem; border-radius:10px; border:1px solid var(--border);">
-        <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em;">Version</div>
-        <div style="font-family:var(--font-display); font-size:1.75rem; font-weight:700; color:var(--cyan);">{{ site_version }}</div>
-      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="card">
+  {# ── Products ── #}
+  {% elif w.key == 'products' %}
+  <section class="dash-widget card" data-widget-key="products" draggable="true">
+    <span class="dash-drag-handle" title="Drag to reorder">{{ icon_grip(16) }}</span>
     <div class="card-title">Products <a href="{{ url_for('admin_products') }}" class="btn btn-sm">Manage →</a></div>
     {% if content.products %}
     <table class="table">
@@ -53,6 +127,225 @@
     {% else %}
     <div class="text-muted">No products yet. <a href="{{ url_for('admin_products') }}">Create one</a>.</div>
     {% endif %}
+  </section>
+  {% endif %}
+
+  {% endif %}
+  {% endfor %}
+
+  {% set enabled_count = dash_layout | selectattr('enabled') | list | length %}
+  {% if enabled_count == 0 %}
+  <div class="card text-muted" style="text-align: center; padding: 2.5rem;">
+    All widgets are hidden. <a href="#" onclick="openCustomizeWidgets(); return false;">Customize widgets</a> to turn some on.
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Customize widgets modal ── -->
+<div class="modal-backdrop" id="customize-widgets-modal" role="dialog" aria-modal="true" aria-labelledby="cw-title" hidden>
+  <div class="modal" onclick="event.stopPropagation()" style="max-width: 520px;">
+    <div class="modal-head">
+      <h2 id="cw-title">Customize widgets</h2>
+      <button type="button" class="btn btn-icon btn-ghost" onclick="closeCustomizeWidgets()" aria-label="Close">{{ icon_close() }}</button>
+    </div>
+    <div class="modal-body" style="min-height: auto;">
+      <p class="hint" style="margin-top: 0; margin-bottom: 1rem;">
+        Toggle widgets on or off, or drag to reorder. Changes save automatically and apply to your dashboard only.
+      </p>
+      <div class="list" id="cw-list">
+        {% for w in dash_layout %}
+        <div class="list-item" draggable="true" data-widget-key="{{ w.key }}"
+             style="grid-template-columns: 28px 1fr auto;">
+          <span class="drag-handle">{{ icon_grip() }}</span>
+          <div>
+            <div style="font-weight: 600; color: var(--text-primary);">{{ w.label }}</div>
+            <div class="text-muted" style="font-size: 0.78rem;">{{ w.description }}</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" class="cw-toggle" {% if w.enabled %}checked{% endif %}>
+            <span class="track"></span>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Server-metrics widget polling ────────────────────────────
+  (function () {
+    const widget = document.getElementById('server-metrics-widget');
+    if (!widget) return;
+    const endpoint = widget.dataset.endpoint;
+    const onlineEndpoint = widget.dataset.onlineEndpoint;
+    const MAX_SAMPLES = 60;
+    const series = { cpu: [], mem: [] };
+
+    function fmtBytes(n) {
+      if (n == null) return '—';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return `${n.toFixed(n < 10 ? 1 : 0)} ${units[i]}`;
+    }
+    function fmtUptime(s) {
+      if (s == null) return '—';
+      const d = Math.floor(s / 86400);
+      const h = Math.floor((s % 86400) / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      if (d > 0) return `${d}d ${h}h`;
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    }
+    function setField(field, value) {
+      widget.querySelectorAll(`[data-field="${field}"]`).forEach(el => { el.textContent = value; });
+    }
+    function drawSpark(canvas, values, color) {
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const cssW = canvas.clientWidth || canvas.width;
+      const cssH = canvas.clientHeight || canvas.height;
+      if (canvas.width !== cssW * dpr) { canvas.width = cssW * dpr; canvas.height = cssH * dpr; }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssW, cssH);
+      if (values.length < 2) return;
+      const step = cssW / (MAX_SAMPLES - 1);
+      ctx.beginPath(); ctx.moveTo(0, cssH);
+      values.forEach((v, i) => {
+        const x = (i + (MAX_SAMPLES - values.length)) * step;
+        const y = cssH - (v / 100) * (cssH - 2) - 1;
+        ctx.lineTo(x, y);
+      });
+      ctx.lineTo((values.length - 1 + (MAX_SAMPLES - values.length)) * step, cssH);
+      ctx.closePath();
+      ctx.fillStyle = color + '22'; ctx.fill();
+      ctx.beginPath();
+      values.forEach((v, i) => {
+        const x = (i + (MAX_SAMPLES - values.length)) * step;
+        const y = cssH - (v / 100) * (cssH - 2) - 1;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    async function tick() {
+      try {
+        const r = await fetch(endpoint, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!r.ok) return;
+        const d = await r.json();
+        setField('os', d.os || '—');
+        setField('cpu_percent', d.cpu_percent != null ? Math.round(d.cpu_percent) : '—');
+        setField('memory_percent', d.memory_percent != null ? Math.round(d.memory_percent) : '—');
+        setField('memory_detail', `${fmtBytes(d.memory_used)} / ${fmtBytes(d.memory_total)}`);
+        const la = d.load_avg || [];
+        setField('load_avg', la.length === 3 ? la.map(v => v.toFixed(2)).join(' / ') : '—');
+        setField('uptime', fmtUptime(d.uptime_seconds));
+        setField('cpu_count', d.cpu_count ? `${d.cpu_count} CPU${d.cpu_count > 1 ? 's' : ''}` : '—');
+        if (d.cpu_percent != null) { series.cpu.push(d.cpu_percent); if (series.cpu.length > MAX_SAMPLES) series.cpu.shift(); }
+        if (d.memory_percent != null) { series.mem.push(d.memory_percent); if (series.mem.length > MAX_SAMPLES) series.mem.shift(); }
+        const cpuSpark = widget.querySelector('canvas[data-series="cpu"]');
+        const memSpark = widget.querySelector('canvas[data-series="mem"]');
+        if (cpuSpark) drawSpark(cpuSpark, series.cpu, '#00F2FF');
+        if (memSpark) drawSpark(memSpark, series.mem, '#AF00FF');
+      } catch (_) {}
+    }
+    async function tickOnline() {
+      if (!onlineEndpoint) return;
+      try {
+        const r = await fetch(onlineEndpoint, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!r.ok) return;
+        const d = await r.json();
+        setField('online_count', d.count);
+        setField('online_label', (d.count === 1 ? 'user · last 5 min' : 'users · last 5 min'));
+        const tile = document.getElementById('online-users-tile');
+        if (tile && d.users && d.users.length) {
+          tile.title = d.users.map(u => `${u.username} (${u.role})`).join(', ');
+        }
+      } catch (_) {}
+    }
+    tick(); tickOnline();
+    setInterval(tick, 5000);
+    if (onlineEndpoint) setInterval(tickOnline, 30000);
+  })();
+
+  // ── Dashboard drag-reorder + customize modal ─────────────────
+  (function () {
+    const list = document.getElementById('dash-widgets');
+    if (!list) return;
+    enableDragReorder(list, '.dash-widget');
+    list.addEventListener('drop', () => setTimeout(saveDashLayoutFromDom, 0));
+  })();
+
+  function openCustomizeWidgets() {
+    const modal = document.getElementById('customize-widgets-modal');
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    modal.onclick = () => closeCustomizeWidgets();
+    const cwList = document.getElementById('cw-list');
+    enableDragReorder(cwList, '.list-item');
+    cwList.addEventListener('drop', () => setTimeout(saveDashLayoutFromModal, 0), { once: false });
+    cwList.querySelectorAll('.cw-toggle').forEach(tg => {
+      tg.onchange = saveDashLayoutFromModal;
+    });
+  }
+  function closeCustomizeWidgets() {
+    const modal = document.getElementById('customize-widgets-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    // Reload so the dashboard reflects whatever the user just changed
+    window.location.reload();
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('customize-widgets-modal');
+      if (modal && !modal.hidden) closeCustomizeWidgets();
+    }
+  });
+
+  async function saveDashLayoutFromDom() {
+    const items = [...document.querySelectorAll('#dash-widgets .dash-widget')];
+    // Build layout in current DOM order, preserving enabled=true for all rendered widgets.
+    // Hidden widgets aren't in the DOM, so we fetch the current layout and merge.
+    const orderedKeys = items.map(el => el.dataset.widgetKey);
+    try {
+      const cur = await fetch('/admin/api/dash-layout', { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      const curData = await cur.json();
+      const currentLayout = curData.layout || [];
+      const byKey = new Map(currentLayout.map(e => [e.key, e]));
+      // Rebuild: enabled widgets in DOM order, then disabled widgets in prior order
+      const layout = [];
+      const seen = new Set();
+      for (const key of orderedKeys) {
+        layout.push({ key, enabled: true });
+        seen.add(key);
+      }
+      for (const entry of currentLayout) {
+        if (!seen.has(entry.key)) {
+          layout.push({ key: entry.key, enabled: false });
+        }
+      }
+      await saveJSON('/admin/api/dash-layout', { layout });
+      showToast('✓ Layout saved');
+    } catch (e) {
+      showToast(`✗ ${e.message || 'Save failed'}`, 'error');
+    }
+  }
+
+  async function saveDashLayoutFromModal() {
+    const items = [...document.querySelectorAll('#cw-list .list-item')];
+    const layout = items.map(el => ({
+      key: el.dataset.widgetKey,
+      enabled: el.querySelector('.cw-toggle').checked,
+    }));
+    const res = await saveJSON('/admin/api/dash-layout', { layout });
+    if (res.ok) showToast('✓ Saved');
+  }
+
+  window.openCustomizeWidgets = openCustomizeWidgets;
+  window.closeCustomizeWidgets = closeCustomizeWidgets;
+</script>
 {% endblock %}

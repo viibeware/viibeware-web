@@ -1,4 +1,5 @@
 {% extends "admin/base.html" %}
+{% from 'admin/_icons.html' import icon_grip %}
 {% block title %}Edit {{ product.name }}{% endblock %}
 {% block page_title %}{{ product.name or product.id }}{% endblock %}
 {% block page_subtitle %}<div class="page-subtitle"><span class="mono">id: {{ product.id }}</span></div>{% endblock %}
@@ -150,7 +151,7 @@
     <div class="list" id="features-list">
       {% for feat in product.features %}
       <div class="list-item" draggable="true">
-        <span class="drag-handle">⠿</span>
+        <span class="drag-handle">{{ icon_grip() }}</span>
         <input type="text" class="feat-input" value="{{ feat }}">
         <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
       </div>
@@ -164,7 +165,7 @@
     <div class="list" id="tech-list">
       {% for t in product.tech_stack %}
       <div class="list-item" draggable="true">
-        <span class="drag-handle">⠿</span>
+        <span class="drag-handle">{{ icon_grip() }}</span>
         <input type="text" class="tech-input" value="{{ t }}">
         <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
       </div>
@@ -181,7 +182,7 @@
     <div class="list" id="repos-list">
       {% for link in product.repo_links %}
       <div class="list-item repo-row" draggable="true" style="grid-template-columns: 28px 1fr 1fr 2fr 1fr auto auto;">
-        <span class="drag-handle">⠿</span>
+        <span class="drag-handle">{{ icon_grip() }}</span>
         <input type="text" class="repo-id" placeholder="ID (e.g. github)" value="{{ link.id or '' }}">
         <input type="text" class="repo-label" placeholder="Label" value="{{ link.label or '' }}">
         <input type="text" class="repo-url" placeholder="URL" value="{{ link.url or '' }}">
@@ -223,7 +224,7 @@
           <div class="step-item" draggable="true" style="background: var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding: 1rem;">
             <div class="row between" style="margin-bottom: 0.6rem;">
               <div class="row">
-                <span class="drag-handle">⠿</span>
+                <span class="drag-handle">{{ icon_grip() }}</span>
                 <input type="text" class="step-number" placeholder="#" value="{{ step.step or loop.index }}" style="width: 60px;" class="mono">
                 <input type="text" class="step-title" placeholder="Step title" value="{{ step.title or '' }}" style="width: 320px;">
               </div>
@@ -334,7 +335,7 @@
     const row = document.createElement('div');
     row.className = 'list-item';
     row.draggable = true;
-    row.innerHTML = `<span class="drag-handle">⠿</span><input type="text" class="feat-input" placeholder="Feature"><button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>`;
+    row.innerHTML = `<span class="drag-handle">{{ icon_grip() }}</span><input type="text" class="feat-input" placeholder="Feature"><button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>`;
     list.appendChild(row);
     row.querySelector('input').focus();
   }
@@ -343,7 +344,7 @@
     const row = document.createElement('div');
     row.className = 'list-item';
     row.draggable = true;
-    row.innerHTML = `<span class="drag-handle">⠿</span><input type="text" class="tech-input" placeholder="e.g. Python"><button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>`;
+    row.innerHTML = `<span class="drag-handle">{{ icon_grip() }}</span><input type="text" class="tech-input" placeholder="e.g. Python"><button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>`;
     list.appendChild(row);
     row.querySelector('input').focus();
   }
@@ -354,7 +355,7 @@
     row.draggable = true;
     row.style.gridTemplateColumns = '28px 1fr 1fr 2fr 1fr auto auto';
     row.innerHTML = `
-      <span class="drag-handle">⠿</span>
+      <span class="drag-handle">{{ icon_grip() }}</span>
       <input type="text" class="repo-id" placeholder="ID (e.g. github)">
       <input type="text" class="repo-label" placeholder="Label">
       <input type="text" class="repo-url" placeholder="URL">
@@ -412,7 +413,7 @@
     step.innerHTML = `
       <div class="row between" style="margin-bottom: 0.6rem;">
         <div class="row">
-          <span class="drag-handle">⠿</span>
+          <span class="drag-handle">{{ icon_grip() }}</span>
           <input type="text" class="step-number mono" placeholder="#" value="${nextNum}" style="width: 60px;">
           <input type="text" class="step-title" placeholder="Step title" style="width: 320px;">
         </div>

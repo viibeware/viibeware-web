@@ -1,4 +1,5 @@
 {% extends "admin/base.html" %}
+{% from 'admin/_icons.html' import icon_grip %}
 {% block title %}Layout &amp; Sections{% endblock %}
 {% block page_title %}Layout &amp; Sections{% endblock %}
 {% block page_subtitle %}<div class="page-subtitle">Drag to reorder. Toggle visibility. Edit label and subtitle for each section.</div>{% endblock %}
@@ -15,7 +16,7 @@
     {% for sec in content.sections %}
     <div class="list-item" draggable="true" data-id="{{ sec.id }}" data-type="{{ sec.type or 'custom' }}" data-product-id="{{ sec.product_id or '' }}"
          style="grid-template-columns: 28px 1fr 1fr 1fr auto auto;">
-      <span class="drag-handle">⠿</span>
+      <span class="drag-handle">{{ icon_grip() }}</span>
       <div>
         <div class="mono" style="font-size:0.78rem; color:var(--text-muted);">{{ sec.id }}</div>
         <div><span class="chip muted">{{ sec.type or 'custom' }}</span>

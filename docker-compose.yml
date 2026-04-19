@@ -7,6 +7,9 @@ services:
     volumes:
       - viibeware-data:/app/data
       - viibeware-uploads:/app/static/uploads
+      # Optional: exposes the host's OS name to the server widget.
+      # If your host doesn't have /etc/os-release, remove this line.
+      - /etc/os-release:/host/etc/os-release:ro
     env_file:
       - .env
     restart: unless-stopped

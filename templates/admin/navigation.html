@@ -1,4 +1,5 @@
 {% extends "admin/base.html" %}
+{% from 'admin/_icons.html' import icon_grip %}
 {% block title %}Navigation{% endblock %}
 {% block page_title %}Header Navigation{% endblock %}
 {% block page_subtitle %}<div class="page-subtitle">Links shown in the public site header. Icon value <code>github</code> or <code>dockerhub</code> renders a branded SVG instead of text.</div>{% endblock %}
@@ -12,7 +13,7 @@
   <div class="list" id="nav-list">
     {% for link in content.nav.links %}
     <div class="list-item" draggable="true" style="grid-template-columns: 28px 2fr 3fr 160px auto;">
-      <span class="drag-handle">⠿</span>
+      <span class="drag-handle">{{ icon_grip() }}</span>
       <input type="text" class="nav-label" placeholder="Label" value="{{ link.label or '' }}">
       <input type="text" class="nav-href" placeholder="URL or #anchor" value="{{ link.href or '' }}">
       <select class="nav-icon">
@@ -43,7 +44,7 @@
     row.draggable = true;
     row.style.gridTemplateColumns = '28px 2fr 3fr 160px auto';
     row.innerHTML = `
-      <span class="drag-handle">⠿</span>
+      <span class="drag-handle">{{ icon_grip() }}</span>
       <input type="text" class="nav-label" placeholder="Label">
       <input type="text" class="nav-href" placeholder="URL or #anchor">
       <select class="nav-icon">

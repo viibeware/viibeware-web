@@ -8,6 +8,7 @@ venv
 data/content.json
 data/content.pre-*.json
 data/auth.json
+data/.online_activity.json
 static/uploads/
 README.md
 LICENSE

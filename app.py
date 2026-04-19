@@ -196,7 +196,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.6.0"
+SITE_VERSION = "0.6.1"
 
 
 @app.context_processor
@@ -1112,6 +1112,218 @@ def _user_dto(u):
     }
 
 
+# ─── Dashboard widget registry + per-user layout ───────────────
+
+DASHBOARD_WIDGETS = [
+    {"key": "server-metrics", "label": "Server & role", "description": "Live CPU, memory, load, uptime, and online user count."},
+    {"key": "at-a-glance",    "label": "At a glance",   "description": "Quick counts of products, sections, and nav links."},
+    {"key": "products",       "label": "Products",      "description": "Quick table of all products with edit links."},
+]
+_DASHBOARD_WIDGET_KEYS = {w["key"] for w in DASHBOARD_WIDGETS}
+
+
+def _default_dash_layout():
+    return [{"key": w["key"], "enabled": True} for w in DASHBOARD_WIDGETS]
+
+
+def resolve_dash_layout(user):
+    """Return the user's dashboard layout as an ordered list of
+    {key, enabled, label, description}. Appends any newly-introduced
+    widgets (default enabled) to the end so existing users pick them up."""
+    stored = user.get("dash_layout") if isinstance(user, dict) else None
+    if not isinstance(stored, list):
+        stored = []
+    seen = set()
+    out = []
+    for entry in stored:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("key")
+        if key not in _DASHBOARD_WIDGET_KEYS or key in seen:
+            continue
+        meta = next(w for w in DASHBOARD_WIDGETS if w["key"] == key)
+        out.append({
+            "key": key,
+            "enabled": bool(entry.get("enabled", True)),
+            "label": meta["label"],
+            "description": meta["description"],
+        })
+        seen.add(key)
+    # Append any widgets not yet in the user's layout
+    for w in DASHBOARD_WIDGETS:
+        if w["key"] not in seen:
+            out.append({"key": w["key"], "enabled": True, "label": w["label"], "description": w["description"]})
+    return out
+
+
+def save_dash_layout(user_id, layout):
+    """Persist a cleaned layout for the given user. Returns the saved layout."""
+    cleaned = []
+    seen = set()
+    for entry in layout:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("key")
+        if key not in _DASHBOARD_WIDGET_KEYS or key in seen:
+            continue
+        cleaned.append({"key": key, "enabled": bool(entry.get("enabled", True))})
+        seen.add(key)
+    # Preserve unmentioned widgets at the end
+    for w in DASHBOARD_WIDGETS:
+        if w["key"] not in seen:
+            cleaned.append({"key": w["key"], "enabled": True})
+    auth = load_auth()
+    for u in auth.get("users", []):
+        if u.get("id") == user_id:
+            u["dash_layout"] = cleaned
+            save_auth(auth)
+            break
+    return cleaned
+
+
+# ─── Server metrics + online-user tracker ──────────────────────
+
+try:
+    import psutil as _psutil
+except ImportError:
+    _psutil = None
+
+_OS_NAME_CACHE = None
+
+
+def _os_pretty_name():
+    """Return a human-readable OS name. Prefers /host/etc/os-release (the
+    container's read-only mount of the host's release file) over the
+    container's own /etc/os-release, so an admin-mounted host release file
+    wins. Falls back to platform.platform() if nothing is readable."""
+    global _OS_NAME_CACHE
+    if _OS_NAME_CACHE is not None:
+        return _OS_NAME_CACHE
+    for path in ("/host/etc/os-release", "/etc/os-release"):
+        try:
+            with open(path) as f:
+                for line in f:
+                    if line.startswith("PRETTY_NAME="):
+                        _OS_NAME_CACHE = line.split("=", 1)[1].strip().strip('"')
+                        return _OS_NAME_CACHE
+        except OSError:
+            continue
+    import platform
+    _OS_NAME_CACHE = platform.platform(terse=True)
+    return _OS_NAME_CACHE
+
+
+def _loadavg():
+    try:
+        return list(os.getloadavg())
+    except (OSError, AttributeError):
+        return [0.0, 0.0, 0.0]
+
+
+def server_metrics_snapshot():
+    """Return current server metrics as a dict. Safe to call without psutil
+    installed — values that require psutil come back as None."""
+    data = {
+        "os": _os_pretty_name(),
+        "hostname": os.uname().nodename if hasattr(os, "uname") else "",
+        "cpu_count": os.cpu_count() or 1,
+        "load_avg": _loadavg(),
+    }
+    if _psutil:
+        vm = _psutil.virtual_memory()
+        data["cpu_percent"] = _psutil.cpu_percent(interval=None)
+        data["memory_total"] = vm.total
+        data["memory_used"] = vm.total - vm.available
+        data["memory_percent"] = vm.percent
+        data["uptime_seconds"] = int(time.time() - _psutil.boot_time())
+    else:
+        data.update({
+            "cpu_percent": None,
+            "memory_total": None,
+            "memory_used": None,
+            "memory_percent": None,
+            "uptime_seconds": None,
+        })
+    return data
+
+
+# Prime the CPU meter so the first real sample returns a real number
+if _psutil is not None:
+    try:
+        _psutil.cpu_percent(interval=None)
+    except Exception:
+        pass
+
+
+# ── Online-user tracker — file-backed, coalesced writes ────────
+_ONLINE_FILE = os.path.join(os.path.dirname(__file__), "data", ".online_activity.json")
+_ONLINE_WRITE_COOLDOWN = 30   # seconds between persists per user
+_ONLINE_WINDOW = 300          # "online" = active within last 5 minutes
+
+
+def _load_online():
+    try:
+        with open(_ONLINE_FILE) as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_online(data):
+    tmp = _ONLINE_FILE + ".tmp"
+    try:
+        with open(tmp, "w") as f:
+            json.dump(data, f)
+        os.replace(tmp, _ONLINE_FILE)
+    except OSError:
+        pass
+
+
+def _record_activity(user_id, username, role):
+    now = time.time()
+    data = _load_online()
+    existing = data.get(user_id)
+    if (
+        existing
+        and now - existing.get("last_seen", 0) < _ONLINE_WRITE_COOLDOWN
+        and existing.get("username") == username
+        and existing.get("role") == role
+    ):
+        return  # skip — last write is recent enough
+    data[user_id] = {"username": username, "role": role, "last_seen": now}
+    # Prune stale entries while we're writing anyway
+    cutoff = now - _ONLINE_WINDOW * 2
+    data = {uid: info for uid, info in data.items() if info.get("last_seen", 0) > cutoff}
+    _save_online(data)
+
+
+def online_users():
+    cutoff = time.time() - _ONLINE_WINDOW
+    users = []
+    for uid, info in _load_online().items():
+        if info.get("last_seen", 0) > cutoff:
+            users.append({
+                "id": uid,
+                "username": info.get("username", ""),
+                "role": info.get("role", ""),
+                "last_seen": info.get("last_seen", 0),
+            })
+    users.sort(key=lambda u: u["last_seen"], reverse=True)
+    return users
+
+
+@app.before_request
+def _track_user_activity():
+    if not request.path.startswith("/admin"):
+        return
+    if request.endpoint in ("static", "admin_login"):
+        return
+    u = current_user()
+    if not u or u.get("bootstrap"):
+        return
+    _record_activity(u["id"], u.get("username", ""), u.get("role", ""))
+
+
 _CHANGELOG_CACHE = {"mtime": 0, "html": ""}
 
 try:
@@ -1149,6 +1361,26 @@ def _read_changelog_html():
     _CHANGELOG_CACHE["mtime"] = mtime
     _CHANGELOG_CACHE["html"] = html
     return html
+
+
+@app.route("/admin/api/server-metrics", methods=["GET"])
+@login_required
+def admin_api_server_metrics():
+    """Live server metrics for the dashboard widget."""
+    return jsonify(server_metrics_snapshot())
+
+
+@app.route("/admin/api/online-users", methods=["GET"])
+@role_required("admin")
+def admin_api_online_users():
+    """Who's currently using the admin (admin-only)."""
+    users = online_users()
+    return jsonify({
+        "status": "ok",
+        "count": len(users),
+        "users": users,
+        "window_seconds": _ONLINE_WINDOW,
+    })
 
 
 @app.route("/admin/app-info", methods=["GET"])
@@ -1330,7 +1562,32 @@ def admin_dashboard():
         "sections_total": len(content.get("sections", [])),
         "nav_links": len(content.get("nav", {}).get("links", [])),
     }
-    return _render_admin("admin/dashboard.html", "dashboard", content=content, stats=stats)
+    user = current_user() or {}
+    dash_layout = resolve_dash_layout(user)
+    return _render_admin("admin/dashboard.html", "dashboard", content=content, stats=stats, dash_layout=dash_layout)
+
+
+@app.route("/admin/api/dash-layout", methods=["GET", "POST"])
+@login_required
+def admin_api_dash_layout():
+    """Per-user dashboard widget layout — order + enabled flag. Bootstrap
+    sessions (no persisted user yet) get the default layout read-only."""
+    user = current_user()
+    if not user or user.get("bootstrap"):
+        if request.method == "POST":
+            return jsonify({"status": "error", "message": "Finish setting your password before customizing widgets"}), 400
+        return jsonify({"status": "ok", "layout": resolve_dash_layout({})})
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        layout = data.get("layout")
+        if not isinstance(layout, list):
+            return jsonify({"status": "error", "message": "Expected {layout: [...]}"}), 400
+        saved = save_dash_layout(user["id"], layout)
+        return jsonify({"status": "ok", "layout": [
+            {**entry, **next((w for w in DASHBOARD_WIDGETS if w["key"] == entry["key"]), {})}
+            for entry in saved
+        ]})
+    return jsonify({"status": "ok", "layout": resolve_dash_layout(user)})
 
 
 @app.route("/admin/layout", methods=["GET", "POST"])
