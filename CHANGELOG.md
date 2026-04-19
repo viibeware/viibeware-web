@@ -2,6 +2,29 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.6.0] — 2026-04-19
+
+### Security
+- **CSRF protection.** Per-session token generated server-side and exposed via `<meta name="csrf-token">`. All state-changing admin requests now require the token — either `X-CSRF-Token` header (XHR/JSON) or a `_csrf` form field (native POSTs). Login is exempt (no session yet); everything else is protected.
+- **Content Security Policy and strict headers on every response** — `Content-Security-Policy` (allows Cloudflare Turnstile + Google Fonts, blocks third-party script sources), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` locking out camera/microphone/geolocation/payment.
+- **Login rate limiting.** Per-IP sliding window — 8 failed logins in 5 minutes triggers a 10-minute lockout. Failures are counted after Turnstile and password verification so an attacker can't probe for the lockout threshold without a valid Turnstile token (when enabled).
+- **SVG upload sanitization.** Uploaded SVGs are stripped of `<script>`, `<foreignObject>`, inline `on*=` event handlers, and `javascript:` URLs before being written to disk. Prevents stored-XSS via SVG logos.
+- **SECRET_KEY warning.** Loud startup log if the environment variable isn't set and the built-in development secret is in use — sessions are forgeable with the default.
+- **Removed `/admin/debug-cookie`** — unauthenticated endpoint that echoed cookies and session state. Useful while debugging session drops in 0.2.x; has no reason to still exist.
+- **Removed `/admin/*` before-request auth logger** — it printed user-agent and content-type to stdout on every admin POST.
+- **Stale sessions invalidated.** `current_user()` now clears the session if the `user_id` no longer matches a user record (e.g. admin deleted the user while the other device was still logged in).
+- **GitHub repo input validation.** Repo strings are now matched against a strict `owner/name` regex before being interpolated into an API URL — blocks any attempt to escape into another host via the version-refresh path.
+- **`FORCE_SECURE_COOKIES` env toggle** — set to `1/true/yes` in production to mark the session cookie `Secure`, so it never travels over plain HTTP.
+
+### Added
+- **About tab in the settings modal.** App icon + "VIIBEWARE Web" + version + "Built by VIIBEWARE" + short description + AGPLv3 license link + tech-stack icon grid (Python, Flask, Jinja, Gunicorn, JavaScript, Docker, Cloudflare) + scrollable CHANGELOG pulled from `CHANGELOG.md` (file-mtime-cached on the server).
+- New endpoint `/admin/app-info` returning app metadata + rendered changelog HTML as JSON, consumed lazily the first time the About tab is opened.
+- Tech-stack SVG icons shipped under `static/img/tech/`, rendered via `mask-image` so they pick up the current text color (and the accent color on hover).
+- Changelog is rendered as proper markdown (headings, lists, bold, code, links, horizontal rules) using the `Markdown` Python package — not a raw code block.
+- Settings modal body now has a `min-height` so the dialog stops resizing as you click between Security / Users / About tabs.
+
+---
+
 ## [0.5.4] — 2026-04-18
 
 ### Removed

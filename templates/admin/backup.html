@@ -37,7 +37,7 @@
       const res = await fetch('/admin/import', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': csrfToken() },
         body: fd,
       });
       if (res.status === 401) {

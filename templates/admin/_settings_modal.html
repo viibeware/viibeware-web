@@ -9,6 +9,7 @@
     <div class="tabs" style="margin: 0 1.5rem;">
       <button data-tab="settings-security" class="active">Security</button>
       <button data-tab="settings-users">Users</button>
+      <button data-tab="settings-about">About</button>
     </div>
 
     <div class="modal-body">
@@ -87,6 +88,54 @@
           </tbody>
         </table>
         <div class="hint" style="margin-top: 0.75rem;">Admins can manage users and settings. Editors can edit site content but not users, settings, or the raw JSON.</div>
+      </div>
+
+      <!-- ── About ──────────────────────────────────────── -->
+      {% set tech_icons = [
+        ('Python', 'python', 'https://www.python.org/'),
+        ('Flask', 'flask', 'https://flask.palletsprojects.com/'),
+        ('Jinja', 'jinja', 'https://jinja.palletsprojects.com/'),
+        ('Gunicorn', 'gunicorn', 'https://gunicorn.org/'),
+        ('JavaScript', 'javascript', 'https://developer.mozilla.org/docs/Web/JavaScript'),
+        ('Docker', 'docker', 'https://www.docker.com/'),
+        ('Cloudflare', 'cloudflare', 'https://www.cloudflare.com/'),
+      ] %}
+      <div class="tab-panel" id="settings-about">
+        <div class="about-hero">
+          <div class="about-hero-brand">
+            <img class="about-logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="VIIBEWARE Web">
+            <div class="about-hero-name" id="about-name">VIIBEWARE Web</div>
+            <div class="about-hero-version">Version <span id="about-version">{{ site_version }}</span></div>
+            <div class="about-tagline" id="about-desc">Loading…</div>
+            <div class="about-built-by">
+              Built by
+              <a href="https://viibeware.com" target="_blank" rel="noopener" class="viibeware-credit">
+                <img src="{{ url_for('static', filename='img/viibeware.svg') }}" alt="">
+                <span class="viibeware-name">VIIBEWARE</span>
+              </a>
+            </div>
+            <div class="about-license">
+              Released under the
+              <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">GNU Affero General Public License v3.0</a>.
+            </div>
+          </div>
+          <div class="about-hero-stack">
+            <div class="about-stack-label">Built With</div>
+            <div class="tech-stack">
+              {% for name, slug, url in tech_icons %}
+              <a class="tech-tile" href="{{ url }}" target="_blank" rel="noopener" title="{{ name }}">
+                <span class="tech-icon" style="-webkit-mask-image: url('{{ url_for('static', filename='img/tech/' ~ slug ~ '.svg') }}'); mask-image: url('{{ url_for('static', filename='img/tech/' ~ slug ~ '.svg') }}');"></span>
+                <span class="tech-tile-name">{{ name }}</span>
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="about-changelog">
+          <div class="about-stack-label" style="margin-top: 1.25rem;">Changelog</div>
+          <div id="about-changelog-text" class="markdown-body">Loading…</div>
+        </div>
       </div>
     </div>
   </div>

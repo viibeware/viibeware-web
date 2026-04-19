@@ -6,6 +6,7 @@
 {% block content %}
 <div class="card">
   <form method="POST" id="raw-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
     <textarea name="raw_json" class="code" style="min-height: 70vh; font-size: 0.8rem;" spellcheck="false">{{ raw_json }}</textarea>
     <div class="card-actions">
       <button type="submit" class="btn btn-primary">Save</button>

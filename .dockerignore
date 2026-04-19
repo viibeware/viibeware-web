@@ -10,6 +10,5 @@ data/content.pre-*.json
 data/auth.json
 static/uploads/
 README.md
-CHANGELOG.md
 LICENSE
 .env

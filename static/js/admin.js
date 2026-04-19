@@ -30,6 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// ── CSRF helper ────────────────────────────────────────
+function csrfToken() {
+  const el = document.querySelector('meta[name="csrf-token"]');
+  return el ? el.getAttribute('content') : '';
+}
+window.csrfToken = csrfToken;
+
 // ── JSON save helper ───────────────────────────────────
 // Wraps fetch() with the credentials + headers + 401-handling used throughout admin.
 async function saveJSON(url, body, opts = {}) {
@@ -41,6 +48,7 @@ async function saveJSON(url, body, opts = {}) {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': csrfToken(),
         ...(opts.headers || {})
       },
       body: body != null ? JSON.stringify(body) : undefined
@@ -78,7 +86,7 @@ async function uploadFile(file) {
     const res = await fetch('/admin/upload', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': csrfToken() },
       body: fd
     });
     if (res.status === 401) {
@@ -149,6 +157,8 @@ window.enableDragReorder = enableDragReorder;
 let _settingsLoaded = false;
 let _settingsState = null;
 
+let _aboutLoaded = false;
+
 async function openSettings() {
   const modal = document.getElementById('settings-modal');
   if (!modal) return;
@@ -156,18 +166,46 @@ async function openSettings() {
   document.body.style.overflow = 'hidden';
   // Backdrop-click to close
   modal.onclick = () => closeSettings();
-  // Tab switching inside modal
+  // Tab switching inside modal (lazy-load About on first view)
   modal.querySelectorAll('.tabs button').forEach(b => {
-    b.onclick = () => {
+    b.onclick = async () => {
       modal.querySelectorAll('.tabs button').forEach(x => x.classList.remove('active'));
       modal.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       modal.querySelector('#' + b.dataset.tab).classList.add('active');
+      if (b.dataset.tab === 'settings-about' && !_aboutLoaded) {
+        await loadAbout();
+        _aboutLoaded = true;
+      }
     };
   });
   if (!_settingsLoaded) {
     await loadSettings();
     _settingsLoaded = true;
+  }
+}
+
+async function loadAbout() {
+  try {
+    const res = await fetch('/admin/app-info', {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const nameEl = document.getElementById('about-name');
+    if (nameEl) nameEl.textContent = data.name || 'VIIBEWARE Web';
+    const versionEl = document.getElementById('about-version');
+    if (versionEl) versionEl.textContent = data.version || '';
+    const descEl = document.getElementById('about-desc');
+    if (descEl) descEl.textContent = data.description || '';
+    const logEl = document.getElementById('about-changelog-text');
+    if (logEl) {
+      if (data.changelog_html) logEl.innerHTML = data.changelog_html;
+      else logEl.textContent = '(changelog unavailable)';
+    }
+  } catch (_) {
+    // silent; About tab is informational
   }
 }
 

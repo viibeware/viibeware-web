@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Copy application code
 COPY app.py .
+COPY CHANGELOG.md .
 COPY templates/ templates/
 COPY static/ static/
 COPY data/content.example.json data/content.example.json

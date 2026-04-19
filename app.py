@@ -6,6 +6,8 @@ Flask application with admin content management backend.
 import io
 import json
 import os
+import re
+import secrets
 import time
 import zipfile
 from datetime import datetime, timedelta
@@ -18,29 +20,62 @@ from flask import (
 )
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "viibeware-dev-key-change-in-prod")
+_DEFAULT_SECRET = "viibeware-dev-key-change-in-prod"
+app.secret_key = os.environ.get("SECRET_KEY", _DEFAULT_SECRET)
+if app.secret_key == _DEFAULT_SECRET:
+    print(
+        "\n" + "!" * 70
+        + "\n[SECURITY] SECRET_KEY is using the built-in development default."
+        + "\n           Sessions can be forged. Set the SECRET_KEY env var to a"
+        + "\n           random 32+ byte string before exposing this service."
+        + "\n           Generate one with:"
+        + "\n               python3 -c \"import secrets; print(secrets.token_hex(32))\""
+        + "\n" + "!" * 70 + "\n",
+        flush=True,
+    )
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB — admin-only uploads, accommodates full-site backup zips
 app.config['SESSION_COOKIE_NAME'] = 'viibeware_session'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+# Auto-secure cookies when served over HTTPS (e.g. behind a reverse proxy).
+# We rely on Flask's ProxyFix-less default detection; if your proxy sets
+# X-Forwarded-Proto, see PREFERRED_URL_SCHEME / werkzeug.middleware.proxy_fix.
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get("FORCE_SECURE_COOKIES", "").lower() in ("1", "true", "yes")
 
 
-@app.before_request
-def _log_admin_auth():
-    """Print cookie + session state for /admin/* POSTs so we can diagnose
-    why sessions are getting dropped on upload. Logs go to the container's
-    stdout (docker compose logs viibeware-web)."""
-    if request.path.startswith("/admin") and request.method == "POST":
-        has_cookie = bool(request.cookies.get("session"))
-        is_logged_in = bool(session.get("admin_logged_in"))
-        print(
-            f"[auth] {request.method} {request.path} "
-            f"cookie_present={has_cookie} logged_in={is_logged_in} "
-            f"ct={request.content_type!r} "
-            f"ua={request.headers.get('User-Agent','')[:60]!r}",
-            flush=True,
-        )
+@app.after_request
+def _security_headers(response):
+    """Apply security response headers on every request.
+
+    CSP allows Cloudflare Turnstile (challenges.cloudflare.com), Google Fonts,
+    and inline styles+scripts (we use plenty of both). Tight enough to block
+    most XSS payloads without breaking the current app. Admin pages get a
+    slightly looser CSP via `unsafe-inline` because the admin uses many inline
+    event handlers and style attributes; the public site gets the same rules
+    for consistency."""
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+        "Content-Security-Policy": (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: blob:; "
+            "frame-src https://challenges.cloudflare.com; "
+            "connect-src 'self' https://challenges.cloudflare.com; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "frame-ancestors 'none'"
+        ),
+    }
+    for k, v in headers.items():
+        response.headers.setdefault(k, v)
+    return response
+
 
 CONTENT_FILE = os.path.join(os.path.dirname(__file__), "data", "content.json")
 CONTENT_EXAMPLE = os.path.join(os.path.dirname(__file__), "data", "content.example.json")
@@ -161,7 +196,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.5.4"
+SITE_VERSION = "0.6.0"
 
 
 @app.context_processor
@@ -298,12 +333,20 @@ def verify_user_credentials(username, password):
 
 
 def current_user():
-    """Return the logged-in user dict for the current session, or None."""
+    """Return the logged-in user dict for the current session, or None.
+
+    Also clears the session if user_id references a user that no longer
+    exists (e.g. because the user was deleted while logged in on another
+    device)."""
     uid = session.get("user_id")
     if uid:
         u = get_user_by_id(uid)
         if u:
             return u
+        # Stale session pointing at a deleted user — invalidate it
+        session.pop("user_id", None)
+        session.pop("admin_logged_in", None)
+        return None
     # Pre-bootstrap session (first login before a user record exists)
     if session.get("bootstrap_admin"):
         return {"id": "bootstrap", "username": ADMIN_USER, "role": "admin", "bootstrap": True}
@@ -645,6 +688,9 @@ VERSION_REFRESH_COOLDOWN_SECONDS = 5 * 60  # Cross-worker: skip if another worke
 VERSION_REFRESH_LOCK_FILE = os.path.join(os.path.dirname(__file__), "data", ".version-refresh-lock")
 
 
+_GITHUB_REPO_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,38})/[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})$")
+
+
 def fetch_github_version(repo, source):
     """Fetch the latest version from GitHub for `owner/repo`.
 
@@ -653,6 +699,10 @@ def fetch_github_version(repo, source):
     with a leading 'v' stripped, or None on failure."""
     repo = (repo or "").strip().strip("/")
     if not repo or "/" not in repo:
+        return None
+    # Strict owner/name format — blocks SSRF attempts like "../evil" or URLs
+    if not _GITHUB_REPO_RE.match(repo):
+        print(f"[version] rejected malformed repo: {repo!r}", flush=True)
         return None
 
     headers = {
@@ -793,6 +843,49 @@ def _wants_json():
     )
 
 
+# ─── CSRF protection ───────────────────────────────────────────
+# Per-session token, required on every state-changing /admin/* request
+# except the login endpoint (which the unauthenticated form must reach).
+
+def csrf_token():
+    """Return the session's CSRF token, generating one if absent. Exposed to
+    Jinja templates as {{ csrf_token() }}."""
+    t = session.get("_csrf_token")
+    if not t:
+        t = secrets.token_urlsafe(32)
+        session["_csrf_token"] = t
+    return t
+
+
+app.jinja_env.globals["csrf_token"] = csrf_token
+
+_CSRF_EXEMPT_PATHS = {
+    "/admin/login",
+}
+
+
+@app.before_request
+def _csrf_protect():
+    """Reject state-changing admin requests that lack a matching CSRF token."""
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return
+    if not request.path.startswith("/admin"):
+        return
+    if request.path in _CSRF_EXEMPT_PATHS:
+        return
+    expected = session.get("_csrf_token")
+    supplied = (
+        request.headers.get("X-CSRF-Token")
+        or request.form.get("_csrf")
+        or ""
+    )
+    if not expected or not supplied or not secrets.compare_digest(expected, supplied):
+        if _wants_json():
+            return jsonify({"status": "error", "message": "CSRF token missing or invalid — reload the page and try again"}), 403
+        flash("Your session token expired. Please reload the page and try again.", "error")
+        return redirect(request.referrer or url_for("admin_dashboard"))
+
+
 def login_required(f):
     """Decorator to require admin login."""
     @wraps(f)
@@ -838,22 +931,66 @@ def index():
 
 # ─── Admin Routes ──────────────────────────────────────────────
 
+# ── Login rate limiting ────────────────────────────────────────
+# Per-IP sliding window. In-memory per worker — not coordinated across workers
+# but enough to slow brute-force attempts from a single source.
+_LOGIN_ATTEMPTS = {}  # ip -> list[float] of recent attempt timestamps
+_LOGIN_LOCKOUT_UNTIL = {}  # ip -> epoch seconds when lockout expires
+_LOGIN_WINDOW_SECONDS = 300      # count failures within the last 5 min
+_LOGIN_MAX_FAILURES = 8          # lock after this many failures in the window
+_LOGIN_LOCKOUT_SECONDS = 600     # 10-min lockout once tripped
+
+
+def _login_rate_ok(ip):
+    """Return (allowed, retry_after_seconds) for the given IP."""
+    now = time.time()
+    until = _LOGIN_LOCKOUT_UNTIL.get(ip, 0)
+    if until > now:
+        return False, int(until - now)
+    cutoff = now - _LOGIN_WINDOW_SECONDS
+    recent = [t for t in _LOGIN_ATTEMPTS.get(ip, []) if t > cutoff]
+    _LOGIN_ATTEMPTS[ip] = recent
+    return True, 0
+
+
+def _login_record_failure(ip):
+    now = time.time()
+    bucket = _LOGIN_ATTEMPTS.setdefault(ip, [])
+    bucket.append(now)
+    if len(bucket) >= _LOGIN_MAX_FAILURES:
+        _LOGIN_LOCKOUT_UNTIL[ip] = now + _LOGIN_LOCKOUT_SECONDS
+        print(f"[auth] lockout: {ip} after {len(bucket)} failed logins", flush=True)
+
+
+def _login_record_success(ip):
+    _LOGIN_ATTEMPTS.pop(ip, None)
+    _LOGIN_LOCKOUT_UNTIL.pop(ip, None)
+
+
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     """Admin login page."""
     ts = turnstile_settings()
     if request.method == "POST":
+        ip = request.remote_addr or "unknown"
+        allowed, retry_after = _login_rate_ok(ip)
+        if not allowed:
+            flash(f"Too many failed login attempts. Try again in {retry_after // 60 + 1} minute(s).", "error")
+            return render_template("admin_login.html", turnstile=ts), 429
         username = request.form.get("username", "")
         password = request.form.get("password", "")
         if turnstile_enabled():
             token = request.form.get("cf-turnstile-response", "")
-            if not verify_turnstile(token, request.remote_addr or ""):
+            if not verify_turnstile(token, ip):
+                _login_record_failure(ip)
                 flash("Turnstile check failed. Please try again.", "error")
                 return render_template("admin_login.html", turnstile=ts)
         user = verify_user_credentials(username, password)
         if not user:
+            _login_record_failure(ip)
             flash("Invalid credentials.", "error")
             return render_template("admin_login.html", turnstile=ts)
+        _login_record_success(ip)
         session.permanent = True
         session["admin_logged_in"] = True
         if user.get("bootstrap"):
@@ -973,6 +1110,62 @@ def _user_dto(u):
         "created_at": u.get("created_at", ""),
         "password_changed_at": u.get("password_changed_at", ""),
     }
+
+
+_CHANGELOG_CACHE = {"mtime": 0, "html": ""}
+
+try:
+    import markdown as _markdown
+except ImportError:
+    _markdown = None
+
+
+def _read_changelog_html():
+    """Render CHANGELOG.md to HTML, mtime-cached. CHANGELOG.md is bundled with
+    the app so this is trusted input — no sanitization beyond what Markdown
+    gives us."""
+    path = os.path.join(os.path.dirname(__file__), "CHANGELOG.md")
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return ""
+    if _CHANGELOG_CACHE["mtime"] == mtime and _CHANGELOG_CACHE["html"]:
+        return _CHANGELOG_CACHE["html"]
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return ""
+    if _markdown is not None:
+        html = _markdown.markdown(
+            text,
+            extensions=["fenced_code", "tables", "sane_lists"],
+            output_format="html5",
+        )
+    else:
+        # Fallback: escape and wrap in <pre> if the markdown lib isn't installed
+        from html import escape as _esc
+        html = f"<pre>{_esc(text)}</pre>"
+    _CHANGELOG_CACHE["mtime"] = mtime
+    _CHANGELOG_CACHE["html"] = html
+    return html
+
+
+@app.route("/admin/app-info", methods=["GET"])
+@login_required
+def admin_app_info():
+    """Return app metadata + changelog for the About tab in the settings modal."""
+    return jsonify({
+        "status": "ok",
+        "name": "VIIBEWARE Web",
+        "version": SITE_VERSION,
+        "built_by": "VIIBEWARE",
+        "built_by_url": "https://viibeware.com",
+        "description": "A self-hosted content management system powering the viibeware corporate website. Multi-user admin with role-based permissions, dynamic product sections, unlimited images, and built-in backup / restore — all driven by a single JSON content file.",
+        "license": "GNU Affero General Public License v3.0",
+        "license_url": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "changelog_html": _read_changelog_html(),
+    })
 
 
 @app.route("/admin/settings", methods=["GET"])
@@ -1437,6 +1630,29 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+# Matches <script> blocks, <foreignObject> blocks, and any on-event handler.
+_SVG_SCRIPT_RE = re.compile(r"<script\b[^>]*>.*?</script\s*>", re.IGNORECASE | re.DOTALL)
+_SVG_FOREIGN_RE = re.compile(r"<foreignObject\b[^>]*>.*?</foreignObject\s*>", re.IGNORECASE | re.DOTALL)
+_SVG_EVENT_RE = re.compile(r"\s+on[a-zA-Z]+\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s>]+)", re.IGNORECASE)
+_SVG_JS_HREF_RE = re.compile(r"(\s(?:xlink:)?href\s*=\s*)(?:\"javascript:[^\"]*\"|'javascript:[^']*'|javascript:[^\s>]+)", re.IGNORECASE)
+
+
+def sanitize_svg_bytes(raw):
+    """Strip script blocks, foreignObject, on* event handlers, and javascript:
+    URLs from SVG bytes. SVGs execute JS when rendered in an <img> src that
+    navigates directly to them, or inside certain contexts — uploaded SVGs
+    should not contain any active content."""
+    try:
+        text = raw.decode("utf-8", errors="replace")
+    except Exception:
+        return raw
+    text = _SVG_SCRIPT_RE.sub("", text)
+    text = _SVG_FOREIGN_RE.sub("", text)
+    text = _SVG_EVENT_RE.sub("", text)
+    text = _SVG_JS_HREF_RE.sub(r'\1"#"', text)
+    return text.encode("utf-8")
+
+
 @app.route("/admin/upload", methods=["POST"])
 @login_required
 def admin_upload():
@@ -1450,8 +1666,19 @@ def admin_upload():
         return jsonify({"status": "error", "message": "File type not allowed"}), 400
 
     filename = secure_filename(f.filename)
+    if not filename:
+        return jsonify({"status": "error", "message": "Invalid filename"}), 400
     filepath = os.path.join(UPLOAD_DIR, filename)
-    f.save(filepath)
+
+    # Sanitize SVGs before writing — SVGs can carry <script> and on-event
+    # handlers that execute when the file is viewed directly.
+    if filename.lower().endswith(".svg"):
+        raw = f.read()
+        cleaned = sanitize_svg_bytes(raw)
+        with open(filepath, "wb") as out:
+            out.write(cleaned)
+    else:
+        f.save(filepath)
     return jsonify({"status": "ok", "path": f"uploads/{filename}"})
 
 
@@ -1573,17 +1800,6 @@ def admin_import():
 
 
 # ─── API (for potential SPA use) ───────────────────────────────
-
-@app.route("/admin/debug-cookie")
-def admin_debug_cookie():
-    """Diagnostic: shows what cookies and session state the server sees."""
-    return jsonify({
-        "cookies_received": dict(request.cookies),
-        "session_has_admin_logged_in": bool(session.get("admin_logged_in")),
-        "session_keys": list(session.keys()),
-        "user_agent": request.headers.get("User-Agent", ""),
-        "accept": request.headers.get("Accept", ""),
-    })
 
 
 @app.route("/api/content")
