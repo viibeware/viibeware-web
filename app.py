@@ -196,7 +196,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.6.2"
+SITE_VERSION = "0.7.0"
 
 
 @app.context_processor
@@ -447,6 +447,10 @@ def _backfill_product(p):
     p.setdefault("features", [])
     p.setdefault("tech_stack", [])
     p.setdefault("repo_links", [])
+    p.setdefault("hero_buttons", [])
+    p.setdefault("anchors", [])
+    if not isinstance(p["anchors"], list):
+        p["anchors"] = []
     p.setdefault("install_tabs", [
         {"id": tab["id"], "label": tab["label"], "enabled": tab["enabled"], "steps": []}
         for tab in _DEFAULT_INSTALL_TABS
@@ -464,6 +468,13 @@ def _backfill_product(p):
         link.setdefault("url", "")
         link.setdefault("icon", "")
         link.setdefault("enabled", False)
+    # Normalize each hero button (CTA buttons shown in the product hero)
+    for btn in p["hero_buttons"]:
+        btn.setdefault("label", "Button")
+        btn.setdefault("url", "")
+        btn.setdefault("style", "primary")  # primary | secondary
+        btn.setdefault("new_tab", True)
+        btn.setdefault("enabled", True)
     return p
 
 
@@ -1694,6 +1705,27 @@ def _slugify(text):
     while "--" in slug:
         slug = slug.replace("--", "-")
     return slug[:64] or "product"
+
+
+def anchor_slug(text):
+    """Normalize a user-entered anchor into a safe URL fragment / HTML id:
+    lowercase, alphanumerics + hyphens only, leading '#' stripped. Returns
+    "" for empty/invalid input so callers can skip it. Exposed to templates
+    as the `anchor` Jinja filter."""
+    raw = (text or "").strip().lstrip("#")
+    out = []
+    for ch in raw.lower():
+        if ch.isalnum():
+            out.append(ch)
+        elif ch in (" ", "-", "_"):
+            out.append("-")
+    slug = "".join(out).strip("-")
+    while "--" in slug:
+        slug = slug.replace("--", "-")
+    return slug[:64]
+
+
+app.jinja_env.filters["anchor"] = anchor_slug
 
 
 def _unique_product_id(content, base):

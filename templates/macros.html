@@ -30,9 +30,17 @@
 {% endif %}
 {% endmacro %}
 
+{# ── Hero CTA button ── filled (primary) or outlined (secondary) ── #}
+{% macro render_hero_button(btn) %}
+{% if btn.enabled and btn.url %}
+<a href="{{ btn.url }}" class="btn {% if btn.style == 'secondary' %}btn-outline{% else %}btn-primary{% endif %}"{% if btn.new_tab %} target="_blank" rel="noopener"{% endif %}>{{ btn.label }}</a>
+{% endif %}
+{% endmacro %}
+
 {# ── Product Showcase Macro ── #}
 {% macro render_product(prod, sec) %}
 <section class="product-section" id="{{ sec.id }}" data-section="{{ sec.id }}">
+  {% for a in prod.anchors %}{% set anchor_id = a | anchor %}{% if anchor_id %}<span id="{{ anchor_id }}" class="product-anchor" aria-hidden="true"></span>{% endif %}{% endfor %}
   <div class="section">
     {% if sec.label %}<div class="section-label reveal">{{ sec.label }}</div>{% endif %}
     {% if sec.subtitle %}<div class="section-title reveal reveal-delay-1">{{ sec.subtitle }}</div>{% endif %}
@@ -58,6 +66,14 @@
         <div class="tech-stack">
           {% for tech in prod.tech_stack %}
           <span class="tech-badge">{{ tech }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% set enabled_buttons = prod.hero_buttons | selectattr('enabled') | selectattr('url') | list %}
+        {% if enabled_buttons %}
+        <div class="product-hero-buttons">
+          {% for btn in enabled_buttons %}
+          {{ render_hero_button(btn) }}
           {% endfor %}
         </div>
         {% endif %}

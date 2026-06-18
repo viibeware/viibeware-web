@@ -76,6 +76,41 @@
       </div>
     </div>
   </div>
+
+  <div class="card">
+    <div class="card-title">Hero buttons <button class="btn btn-sm" onclick="addHeroButton()">+ Add</button></div>
+    <div class="card-sub">Call-to-action buttons shown in the product hero on the homepage (e.g. "Get Started", "Live Demo"). Drag to reorder.</div>
+    <div class="list" id="hero-buttons-list">
+      {% for btn in product.hero_buttons %}
+      <div class="list-item hero-btn-row" draggable="true" style="grid-template-columns: 28px 1fr 2fr 140px auto auto auto;">
+        <span class="drag-handle">{{ icon_grip() }}</span>
+        <input type="text" class="hb-label" placeholder="Label" value="{{ btn.label or '' }}">
+        <input type="text" class="hb-url" placeholder="URL (https://… or #section)" value="{{ btn.url or '' }}">
+        <select class="hb-style">
+          <option value="primary" {% if btn.style != 'secondary' %}selected{% endif %}>Primary (filled)</option>
+          <option value="secondary" {% if btn.style == 'secondary' %}selected{% endif %}>Secondary (outline)</option>
+        </select>
+        <label class="inline" title="Open link in a new tab"><span class="toggle"><input type="checkbox" class="hb-newtab" {% if btn.new_tab %}checked{% endif %}><span class="track"></span></span><span class="hint" style="margin:0;">New tab</span></label>
+        <label class="inline" title="Show this button"><span class="toggle"><input type="checkbox" class="hb-enabled" {% if btn.enabled %}checked{% endif %}><span class="track"></span></span><span class="hint" style="margin:0;">On</span></label>
+        <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Anchors <button class="btn btn-sm" onclick="addAnchor()">+ Add</button></div>
+    <div class="card-sub">Named in-page link targets for this product. Use lowercase letters, numbers, and hyphens (spaces become hyphens). Link to one with <code>#name</code> from nav links, hero buttons, or anywhere. Drag to reorder.</div>
+    <div class="list" id="anchors-list">
+      {% for a in product.anchors %}
+      <div class="list-item" draggable="true">
+        <span class="drag-handle">{{ icon_grip() }}</span>
+        <input type="text" class="anchor-input mono" placeholder="e.g. overview" value="{{ a }}">
+        <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 </div>
 
 <!-- ── Media ──────────────────────────────────────── -->
@@ -263,6 +298,8 @@
   // ── Drag-reorder lists ───────────────────────────────
   enableDragReorder('#features-list');
   enableDragReorder('#tech-list');
+  enableDragReorder('#hero-buttons-list', '.hero-btn-row');
+  enableDragReorder('#anchors-list');
   enableDragReorder('#repos-list');
   enableDragReorder('#screenshots-grid', '.screenshot-tile');
   // Steps: each tab has its own list
@@ -348,6 +385,38 @@
     list.appendChild(row);
     row.querySelector('input').focus();
   }
+  function addAnchor() {
+    const list = document.getElementById('anchors-list');
+    const row = document.createElement('div');
+    row.className = 'list-item';
+    row.draggable = true;
+    row.innerHTML = `<span class="drag-handle">{{ icon_grip() }}</span><input type="text" class="anchor-input mono" placeholder="e.g. overview"><button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>`;
+    list.appendChild(row);
+    row.querySelector('input').focus();
+  }
+
+  function addHeroButton() {
+    const list = document.getElementById('hero-buttons-list');
+    const row = document.createElement('div');
+    row.className = 'list-item hero-btn-row';
+    row.draggable = true;
+    row.style.gridTemplateColumns = '28px 1fr 2fr 140px auto auto auto';
+    row.innerHTML = `
+      <span class="drag-handle">{{ icon_grip() }}</span>
+      <input type="text" class="hb-label" placeholder="Label">
+      <input type="text" class="hb-url" placeholder="URL (https://… or #section)">
+      <select class="hb-style">
+        <option value="primary" selected>Primary (filled)</option>
+        <option value="secondary">Secondary (outline)</option>
+      </select>
+      <label class="inline" title="Open link in a new tab"><span class="toggle"><input type="checkbox" class="hb-newtab" checked><span class="track"></span></span><span class="hint" style="margin:0;">New tab</span></label>
+      <label class="inline" title="Show this button"><span class="toggle"><input type="checkbox" class="hb-enabled" checked><span class="track"></span></span><span class="hint" style="margin:0;">On</span></label>
+      <button class="list-item-remove" onclick="this.closest('.list-item').remove()">×</button>
+    `;
+    list.appendChild(row);
+    row.querySelector('.hb-label').focus();
+  }
+
   function addRepo() {
     const list = document.getElementById('repos-list');
     const row = document.createElement('div');
@@ -465,6 +534,19 @@
       icon: el.querySelector('.repo-icon').value.trim(),
       enabled: el.querySelector('.repo-enabled').checked,
     })).filter(r => r.label || r.url);
+    const slugifyAnchor = s => (s || '').trim().replace(/^#+/, '').toLowerCase()
+      .replace(/[^a-z0-9 _-]/g, '').replace(/[\s_]+/g, '-').replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '').slice(0, 64);
+    const anchors = [...new Set(
+      [...document.querySelectorAll('#anchors-list .anchor-input')].map(i => slugifyAnchor(i.value)).filter(Boolean)
+    )];
+    const hero_buttons = [...document.querySelectorAll('#hero-buttons-list .hero-btn-row')].map(el => ({
+      label: el.querySelector('.hb-label').value.trim(),
+      url: el.querySelector('.hb-url').value.trim(),
+      style: el.querySelector('.hb-style').value,
+      new_tab: el.querySelector('.hb-newtab').checked,
+      enabled: el.querySelector('.hb-enabled').checked,
+    })).filter(b => b.label || b.url);
     const install_tabs = [...document.querySelectorAll('#tabs-container .tab-card')].map(tabEl => {
       const steps = [...tabEl.querySelectorAll('.step-item')].map(stepEl => ({
         step: stepEl.querySelector('.step-number').value.trim(),
@@ -497,6 +579,8 @@
       features,
       tech_stack,
       repo_links,
+      hero_buttons,
+      anchors,
       install_tabs,
     };
 

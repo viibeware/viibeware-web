@@ -130,4 +130,8 @@ Built with Flask, Jinja2, vanilla JS, and a lot of conversations with Claude. No
 
 ## License
 
-© 2026 viibeware Corp. All rights reserved.
+Licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+
+Because this is a web application, the AGPL's network-use clause applies: if you run a modified version of viibeware Web on a server that users interact with over a network, you must make your modified source available to those users. See the [LICENSE](LICENSE) file for the full terms.
+
+© 2026 viibeware Corp.

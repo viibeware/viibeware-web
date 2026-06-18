@@ -687,6 +687,32 @@ body::after {
   display: inline-block;
 }
 
+/* ── Product Anchors ───────────────────────────────────────── */
+/* Invisible in-page link targets; scroll-margin clears the fixed 70px nav. */
+.product-anchor {
+  display: block;
+  height: 0;
+  visibility: hidden;
+  scroll-margin-top: 90px;
+}
+
+/* ── Product Hero Buttons ──────────────────────────────────── */
+.product-hero-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.75rem;
+}
+
+.product-hero-buttons .btn {
+  font-size: 0.8rem;
+  padding: 0.75rem 1.6rem;
+}
+
+@media (max-width: 640px) {
+  .product-hero-buttons .btn { width: 100%; justify-content: center; }
+}
+
 /* ── Product Repo Links ────────────────────────────────────── */
 .product-repo-links {
   display: flex;

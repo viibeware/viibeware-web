@@ -2,6 +2,37 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.7.0] — 2026-06-18
+
+### Changed
+- **Relicensed under AGPL-3.0** — viibeware Web is now released under the [GNU Affero General Public License v3.0](LICENSE), replacing the previous "all rights reserved" notice. A full `LICENSE` file with the canonical AGPLv3 text is now included at the repository root. Because viibeware Web is a network-served application, the AGPL's network-use clause applies: anyone running a modified copy as a public service must offer their modified source to its users. The About tab in admin settings already surfaced this license; the repository, README, and release artifacts now match it.
+
+### Release
+- Published to Docker Hub (`viibeware/viibeware-web:0.7.0`, also tagged `latest`).
+
+---
+
+## [0.6.5] — 2026-05-23
+
+### Release
+- Published to Docker Hub (`viibeware/viibeware-web:0.6.5`), the first image since 0.6.2. Bundles the previously-unreleased 0.6.3 (**product hero buttons**) and 0.6.4 (**product anchors**) work; no functional changes beyond the version bump.
+
+---
+
+## [0.6.4] — 2026-05-23
+
+### Added
+- **Product anchors** — each product can define a list of named in-page link targets. Manage them in the **Core** tab of the product editor (add, remove, drag to reorder). Each anchor renders as an invisible target inside the product section, so `#name` links jump straight to that product (with a scroll offset that clears the fixed nav). Anchor names are normalized to a safe URL fragment (lowercase, alphanumerics + hyphens; spaces become hyphens) and de-duplicated on save. Stored per-product as `anchors` and backfilled in `load_content()`. New Jinja `anchor` filter + `anchor_slug()` helper in `app.py`.
+
+---
+
+## [0.6.3] — 2026-05-23
+
+### Added
+- **Product hero buttons** — each product can now have call-to-action buttons (e.g. "Get Started", "Live Demo", "Docs") that render in the product hero on the homepage, above the repo links. Each button has a label, URL, style (**Primary** filled / **Secondary** outline), an "open in new tab" toggle, and an on/off toggle. Manage them in the **Core** tab of the product editor — add, remove, and drag to reorder. Stored per-product as `hero_buttons` and backfilled in `load_content()` so existing installs pick up the empty default.
+
+---
+
 ## [0.6.2] — 2026-04-19
 
 ### Added
