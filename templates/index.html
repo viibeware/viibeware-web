@@ -77,10 +77,20 @@
         </div>
         <h1 class="reveal reveal-delay-1">{{ content.hero.headline }}</h1>
         <p class="reveal reveal-delay-2">{{ content.hero.subheadline }}</p>
+        {% set cta1_href = (content.hero.cta_primary_href or '') | trim %}
+        {% set cta2_href = (content.hero.cta_secondary_href or '') | trim %}
+        {% set cta1 = content.hero.cta_primary and cta1_href %}
+        {% set cta2 = content.hero.cta_secondary and cta2_href %}
+        {% if cta1 or cta2 %}
         <div class="hero-actions reveal reveal-delay-3">
-          <a href="#{{ content.hero.cta_primary_href or 'products' }}" class="btn btn-primary">{{ content.hero.cta_primary }} →</a>
-          <a href="#{{ content.hero.cta_secondary_href or 'install' }}" class="btn btn-outline">{{ content.hero.cta_secondary }}</a>
+          {% if cta1 %}
+          <a href="{{ cta1_href if '://' in cta1_href or cta1_href.startswith('#') or cta1_href.startswith('/') else '#' + cta1_href }}" class="btn btn-primary"{% if '://' in cta1_href %} target="_blank" rel="noopener"{% endif %}>{{ content.hero.cta_primary }} →</a>
+          {% endif %}
+          {% if cta2 %}
+          <a href="{{ cta2_href if '://' in cta2_href or cta2_href.startswith('#') or cta2_href.startswith('/') else '#' + cta2_href }}" class="btn btn-outline"{% if '://' in cta2_href %} target="_blank" rel="noopener"{% endif %}>{{ content.hero.cta_secondary }}</a>
+          {% endif %}
         </div>
+        {% endif %}
       </div>
     </section>
 

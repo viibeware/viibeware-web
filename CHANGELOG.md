@@ -2,6 +2,14 @@
 
 All notable changes to the viibeware Corp. website.
 
+## [0.7.1] — 2026-07-22
+
+### Changed
+- **Hero CTA buttons hide when blank** — each hero button now renders only if it has both a label and a link target; leaving the target blank in the admin hides that button (the whole action row is skipped if both are hidden). Missing keys in older `content.json` files are backfilled to the legacy `#products` / `#install` targets, so existing installs are unaffected.
+- **Hero CTA targets accept full URLs** — targets containing `://` are used as-is and open in a new tab; values starting with `#` or `/` are also used verbatim, and bare values like `products` still get `#` prepended. Admin field labels/placeholders updated to match.
+
+---
+
 ## [0.7.0] — 2026-06-18
 
 ### Changed

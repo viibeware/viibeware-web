@@ -196,7 +196,7 @@ _migrate_img_to_uploads_once()
 CACHE_VERSION = str(int(time.time()))
 
 # Site version — displayed in admin panel only
-SITE_VERSION = "0.7.0"
+SITE_VERSION = "0.7.1"
 
 
 @app.context_processor
@@ -630,6 +630,9 @@ def load_content():
     hero.setdefault("subheadline", "")
     hero.setdefault("cta_primary", "")
     hero.setdefault("cta_secondary", "")
+    # Missing key → legacy default target; explicit "" means the button is hidden
+    hero.setdefault("cta_primary_href", "#products")
+    hero.setdefault("cta_secondary_href", "#install")
 
     # About backfill
     about = data["about"]

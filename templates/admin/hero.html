@@ -26,12 +26,12 @@
   </div>
   <div class="form-row two-col">
     <div>
-      <label>Primary CTA target (#anchor)</label>
-      <input type="text" id="hero-cta1-href" value="{{ content.hero.cta_primary_href or '' }}" placeholder="#products">
+      <label>Primary CTA target (#anchor or full URL — blank hides the button)</label>
+      <input type="text" id="hero-cta1-href" value="{{ content.hero.cta_primary_href or '' }}" placeholder="#products or https://…">
     </div>
     <div>
-      <label>Secondary CTA target (#anchor)</label>
-      <input type="text" id="hero-cta2-href" value="{{ content.hero.cta_secondary_href or '' }}" placeholder="#install">
+      <label>Secondary CTA target (#anchor or full URL — blank hides the button)</label>
+      <input type="text" id="hero-cta2-href" value="{{ content.hero.cta_secondary_href or '' }}" placeholder="#install or https://…">
     </div>
   </div>
 </div>
